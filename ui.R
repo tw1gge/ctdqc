@@ -9,7 +9,7 @@ library(shiny)
 library(shinyFiles)
 library(leaflet)
 
-vchannels = c("V0", "V1", "V2", "V3", "V4", "V5", "V6", "V7")
+vchannels = c("v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7")
 
 shinyUI(fluidPage(
 
@@ -44,8 +44,8 @@ shinyUI(fluidPage(
         tabPanel("Profile Plot",
                  fluidRow(
                    column(4, selectInput("y", "Y axis", choices = NULL)),
-                   column(4, selectInput("x1", "X axis 1", choices = NULL)),
-                   column(4, selectInput("x2", "X axis 2", choices = NULL))
+                   column(4, selectInput("x1", "Blue X axis", choices = NULL)),
+                   column(4, selectInput("x2", "Red X axis", choices = NULL))
                  ),
                  plotOutput("profile_plot")),
         tabPanel("TS Plot", plotOutput("TS_plot")),
@@ -53,13 +53,14 @@ shinyUI(fluidPage(
         tabPanel("Sensors",
                  inputPanel(
                    h4("Optode"),
-                   selectInput("optode_foil", "Optode foil Batch #", choices = NULL),
-                   selectInput('optode_vchannels', "Optode Temperature channel", choices = vchannels, selected = "V4"),
+                   selectInput("optode_foil", "Optode foil Batch #", choices = unique(optode_coefs$batch)),
+                   selectInput('optode_T_channel', "Optode Temperature channel", choices = vchannels, selected = "v6"),
+                   selectInput('optode_dphase_channel', "Optode dPhase channel", choices = vchannels, selected = "v7"),
                    actionButton('optode', "Process Optode", icon=icon("life-ring"))
                  ),
                  inputPanel(
                    h4("RINKO"),
-                   selectInput('rinko_vchannels', "RINKO Temperature channel", choices = vchannels, selected = "V6"),
+                   selectInput('rinko_vchannels', "RINKO Temperature channel", choices = vchannels, selected = "v6"),
                    actionButton('rinko', "Process RINKO", icon=icon("times-circle-o"))
                  ),
                  inputPanel(

@@ -12,6 +12,8 @@ library(data.table)
 library(cefasMOS)
 library(leaflet)
 
+optode_coefs = read.csv("optode_coefs.csv")
+
 shinyServer(function(input, output, session) {
 
   volumes = getVolumes()
@@ -32,7 +34,6 @@ shinyServer(function(input, output, session) {
         # Increment the progress bar, and update the detail text.
         incProgress(1/length(filelist()), detail = paste("loading", i))
         d[[i]] = read.ctd.sbe(paste0(dir,"/",i))
-        print(paste0(dir,i))
       }
     })
     profiles$data = d
@@ -55,6 +56,26 @@ shinyServer(function(input, output, session) {
 
   observeEvent(input$revert,{
     profiles$data[[input$select_profile]] = profiles$original[[input$select_profile]]
+  })
+
+  ## SENSORS
+
+  observeEvent(input$optode, {
+    optode_T = optode.analogtemp(
+        unlist(profiles$data[[input$select_profile]]@data[input$optode_T_channel])
+        )
+    optode_Dphase = optode.analogDphase(
+        unlist(profiles$data[[input$select_profile]]@data[input$optode_dphase_channel])
+        )
+    optode_O2 = optode.phaseCalc(optode_Dphase, optode_T, subset(optode_coefs, batch == input$optode_foil))
+    profiles$data[[input$select_profile]] = ctdAddColumn(profiles$data[[input$select_profile]],
+                                                         optode_T, "temperature_optode", label = "temperature",
+                                                         unit = list(name=expression(degree*C), scale="Optode"))
+    profiles$data[[input$select_profile]] = ctdAddColumn(profiles$data[[input$select_profile]],
+                                                         optode_O2, "oxygen_optode",
+                                                         unit = list(name = expression(mmol~m-3), scale="Optode"))
+    processingLog(profiles$data[[input$select_profile]]) = paste("Optode processed with foil batch", input$optode_foil)
+
   })
 
   observeEvent(input$save,{
@@ -101,7 +122,7 @@ shinyServer(function(input, output, session) {
         x2 = unlist(profiles$data[[input$select_profile]]@data[input$x2])
         y = unlist(profiles$data[[input$select_profile]]@data[input$y])
         ylim = rev(range(y))
-        plot(x = x1, y = y, type = "l", ylim = ylim, xlab = input$x1, ylab = input$y)
+        plot(x = x1, y = y, type = "l", ylim = ylim, xlab = input$x1, ylab = input$y, col = "blue")
         par(new = T)
         plot(x = x2, y = y, type = "l", ylim = ylim, axes = F, xlab = NA, ylab = NA, col = "red")
         axis(side = 3)
@@ -125,3 +146,23 @@ shinyServer(function(input, output, session) {
   )
   output$debug = renderPrint({NULL})
 })
+
+optode.analogtemp <- function(v){
+  return( ((v * 45) / 5) - 5 )
+}
+optode.analogDphase <- function(v){
+  return( 10 + (v / 5) * 60 )
+}
+optode.phaseCalc <- function(DPhase, Temp, coefs){
+  # for mkl optodes 3830 & 3835
+    with(coefs, {
+      print(paste("using foil batch coefs", batch[1]))
+      (C0[1]+C0[2]*Temp+C0[3]*Temp^2+C0[4]*Temp^3) +
+      (C1[1]+C1[2]*Temp+C1[3]*Temp^2+C1[4]*Temp^3) *
+      DPhase+(C2[1]+C2[2]*Temp+C2[3]*Temp^2+C2[4]*Temp^3) *
+      DPhase^2+(C3[1]+C3[2]*Temp+C3[3]*Temp^2+C3[4]*Temp^3) *
+      DPhase^3+(C4[1]+C4[2]*Temp+C4[3]*Temp^2+C4[4]*Temp^3) *
+      DPhase^4
+    })
+}
+
