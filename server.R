@@ -13,6 +13,7 @@ library(cefasMOS)
 library(leaflet)
 
 optode_coefs = read.csv("optode_coefs.csv")
+rinko_coefs = list(serial = "#0263 ARO-CAV", A = -42.34162, B = +127.6475, C = -0.3677435, D = +0.01137, E = +0.0046, F = +7.57e-05)
 
 shinyServer(function(input, output, session) {
 
@@ -61,20 +62,44 @@ shinyServer(function(input, output, session) {
   ## SENSORS
 
   observeEvent(input$optode, {
-    optode_T = optode.analogtemp(
+    optode_temperature = optode.analogtemp(
         unlist(profiles$data[[input$select_profile]]@data[input$optode_T_channel])
         )
     optode_Dphase = optode.analogDphase(
         unlist(profiles$data[[input$select_profile]]@data[input$optode_dphase_channel])
         )
-    optode_O2 = optode.phaseCalc(optode_Dphase, optode_T, subset(optode_coefs, batch == input$optode_foil))
+    optode_oxygen = optode.phaseCalc(optode_Dphase, optode_temperature, subset(optode_coefs, batch == input$optode_foil))
     profiles$data[[input$select_profile]] = ctdAddColumn(profiles$data[[input$select_profile]],
-                                                         optode_T, "temperature_optode", label = "temperature",
+                                                         optode_temperature, "temperature_optode", label = "temperature",
                                                          unit = list(name=expression(degree*C), scale="Optode"))
     profiles$data[[input$select_profile]] = ctdAddColumn(profiles$data[[input$select_profile]],
-                                                         optode_O2, "oxygen_optode",
+                                                         optode_oxygen, "oxygen_optode",
                                                          unit = list(name = expression(mmol~m-3), scale="Optode"))
     processingLog(profiles$data[[input$select_profile]]) = paste("Optode processed with foil batch", input$optode_foil)
+
+  })
+
+  observeEvent(input$rinko, {
+    rinko_temperature = rinko_temp(
+        unlist(profiles$data[[input$select_profile]]@data[input$rinko_T_channel])
+        )
+    pressure =  unlist(profiles$data[[input$select_profile]]@data["pressure"])
+    rinko_oxygen = rinko_o2(
+        unlist(profiles$data[[input$select_profile]]@data[input$rinko_O_channel]),
+        rinko_temperature,
+        oC = rinko_coefs,
+        G = input$rinko_G,
+        H = input$rinko_H
+        )
+    profiles$data[[input$select_profile]] = ctdAddColumn(profiles$data[[input$select_profile]],
+                                                         rinko_temperature, "temperature_RINKO", label = "temperature",
+                                                         unit = list(name=expression(degree*C), scale="RINKO"))
+    profiles$data[[input$select_profile]] = ctdAddColumn(profiles$data[[input$select_profile]],
+                                                         rinko_oxygen, "oxygen_RINKO", label = "oxygen",
+                                                         unit = list(name = expression(mmol~m-3), scale="RINKO"))
+    processingLog(profiles$data[[input$select_profile]]) = paste("RINKO processed with coefs", rinko_coefs[["serial"]],
+                                                                 ",G =", input$rinko_G,
+                                                                 ",H =", input$rinko_H)
 
   })
 

@@ -60,7 +60,10 @@ shinyUI(fluidPage(
                  ),
                  inputPanel(
                    h4("RINKO"),
-                   selectInput('rinko_vchannels', "RINKO Temperature channel", choices = vchannels, selected = "v6"),
+                   selectInput('rinko_T_channel', "RINKO Temperature channel", choices = vchannels, selected = "v4"),
+                   selectInput('rinko_O_channel', "RINKO Oxygen channel", choices = vchannels, selected = "v5"),
+                   numericInput('rinko_G', label = "G", value = 0),
+                   numericInput('rinko_H', label = "H", value = 1),
                    actionButton('rinko', "Process RINKO", icon=icon("times-circle-o"))
                  ),
                  inputPanel(
