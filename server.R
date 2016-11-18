@@ -37,11 +37,15 @@ shinyServer(function(input, output, session) {
     })
     profiles$data = d
     profiles$original = d
-    profiles$positions = rbindlist(lapply( profiles$data , function(x) `@`( x , metadata)[c("startTime", "station", "longitude", "latitude")]))
+    profiles$positions = rbindlist(lapply( profiles$data , function(x) `@`( x , metadata)[c("filename", "startTime", "station", "longitude", "latitude")]))
   })
 
   observeEvent(input$trim,{
-    profiles$data[[input$select_profile]] = ctdTrim(profiles$data[[input$select_profile]])
+    profiles$data[[input$select_profile]] = ctdTrim(profiles$data[[input$select_profile]],
+                                                    method = "scan", parameters = input$trim_scans)
+  })
+  observeEvent(input$autotrim,{
+    profiles$data[[input$select_profile]] = ctdTrim(profiles$data[[input$select_profile]], parameters = list(pmin=1))
   })
 
   observeEvent(input$revert,{
@@ -54,9 +58,19 @@ shinyServer(function(input, output, session) {
 
     # update select input when filelist changes
   observe({
-    updateSelectInput(session, "select_profile", choices = names(profiles$data))
+    updateSelectInput(session, "select_profile", choices = names(profiles$original))
     })
-  output$summary <- renderPrint( summary(profiles$data[[input$select_profile]]@metadata) )
+  observe({
+    if(!is.null(profiles$data[[input$select_profile]]))
+    updateSliderInput(session, "trim_scans",
+                      min = min(profiles$data[[input$select_profile]]@data$scan),
+                      max = max(profiles$data[[input$select_profile]]@data$scan))
+  })
+  output$summary <- renderPrint(
+    # workaround for oce function not liking null data
+    if(!is.null(profiles$data[[input$select_profile]]))
+    summary(profiles$data[[input$select_profile]])
+    )
   output$scan_plot = renderPlot({
     # workaround for plot function not liking null data
     if(!is.null(profiles$data[[input$select_profile]]))
@@ -67,9 +81,19 @@ shinyServer(function(input, output, session) {
     if(!is.null(profiles$data[[input$select_profile]]))
     plotProfile(profiles$data[[input$select_profile]])
     })
+  output$TS_plot = renderPlot({
+    # workaround for plot function not liking null data
+    if(!is.null(profiles$data[[input$select_profile]]))
+    plotTS(profiles$data[[input$select_profile]])
+    })
   output$map = renderLeaflet(
+    # workaround for oce function not liking null data
+    if(!is.null(profiles$data[[input$select_profile]]))
     leaflet(profiles$positions) %>%
       addTiles() %>%
-      addCircles(~longitude, ~latitude)
+      addMarkers(~longitude, ~latitude, popup = ~paste("Station", station,"\r", "@", startTime)) %>%
+      setView(lat = profiles$data[[input$select_profile]]@metadata$latitude,
+              lng = profiles$data[[input$select_profile]]@metadata$longitude,
+              zoom = 7)
   )
 })

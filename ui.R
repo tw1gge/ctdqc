@@ -16,16 +16,20 @@ shinyUI(fluidPage(
 
   # Sidebar with a slider input for number of bins
   sidebarLayout(
-    sidebarPanel(width = 4,
-                 fluidRow(
-      shinyDirButton('directory', 'Select CNV Folder', 'Please select a folder'),
+    sidebarPanel(
       textOutput('directory'),
+      shinyDirButton('directory', 'Select CNV Folder', 'Please select a folder'),
       actionButton('read_files', "Read CNV files", icon=icon("book")),
-      actionButton('trim', "Trim CTD", icon=icon("floppy-o")),
-      actionButton('revert', "Revert", icon=icon("floppy-o")),
+      actionButton('revert', "Revert", icon=icon("repeat")),
       actionButton('dump', "DUMP", icon=icon("floppy-o")),
-      selectInput('select_profile', "Select profile", choices = NULL)
-                 )
+      selectInput('select_profile', "Select profile", choices = NULL),
+
+      h4("Trim"),
+      actionButton('trim', "Trim", icon=icon("scissors")),
+      actionButton('autotrim', "Autotrim", icon=icon("scissors")),
+       wellPanel(
+         sliderInput("trim_scans", "Trim scans:", min = 0, max = 1000, value = c(0,500))
+         )
     ),
 
     # Show a plot of the generated distribution
@@ -33,6 +37,7 @@ shinyUI(fluidPage(
       tabsetPanel(
         tabPanel("Scan Plot", plotOutput("scan_plot")),
         tabPanel("Profile Plot", plotOutput("profile_plot")),
+        tabPanel("TS Plot", plotOutput("TS_plot")),
         tabPanel("Map", leafletOutput("map")),
         tabPanel("Summary", verbatimTextOutput("summary"))
       )
