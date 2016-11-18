@@ -27,20 +27,25 @@ shinyUI(fluidPage(
       h4("Trim"),
       actionButton('trim', "Trim", icon=icon("scissors")),
       actionButton('autotrim', "Autotrim", icon=icon("scissors")),
-       wellPanel(
-         sliderInput("trim_scans", "Trim scans:", min = 0, max = 1000, value = c(0,500))
-         )
+
+      h4("Decimate"),
+      numericInput('bin_size', "Bin Size (m)", min = 0.5, max = 5, value = 0.5, step = 0.5),
+      actionButton('decimate', "Decimate", icon=icon("delicious"))
+
+
     ),
 
     # Show a plot of the generated distribution
     mainPanel(
       tabsetPanel(
-        tabPanel("Scan Plot", plotOutput("scan_plot")),
+        tabPanel("Scan Plot", plotOutput("scan_plot", brush = brushOpts("scan_brush", direction = "x"))),
         tabPanel("Profile Plot", plotOutput("profile_plot")),
         tabPanel("TS Plot", plotOutput("TS_plot")),
         tabPanel("Map", leafletOutput("map")),
+        tabPanel("Sensors"),
         tabPanel("Summary", verbatimTextOutput("summary"))
-      )
+      ),
+      verbatimTextOutput("debug")
     )
   )
 ))

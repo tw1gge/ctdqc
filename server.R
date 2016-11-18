@@ -42,10 +42,15 @@ shinyServer(function(input, output, session) {
 
   observeEvent(input$trim,{
     profiles$data[[input$select_profile]] = ctdTrim(profiles$data[[input$select_profile]],
-                                                    method = "scan", parameters = input$trim_scans)
+                                                    method = "scan", parameters = round(c(input$scan_brush$xmin, input$scan_brush$xmax)))
   })
   observeEvent(input$autotrim,{
     profiles$data[[input$select_profile]] = ctdTrim(profiles$data[[input$select_profile]], parameters = list(pmin=1))
+  })
+
+  observeEvent(input$decimate,{
+    profiles$data[[input$select_profile]] = ctdDecimate(profiles$data[[input$select_profile]],
+                                                        p = input$bin_size)
   })
 
   observeEvent(input$revert,{
@@ -60,12 +65,7 @@ shinyServer(function(input, output, session) {
   observe({
     updateSelectInput(session, "select_profile", choices = names(profiles$original))
     })
-  observe({
-    if(!is.null(profiles$data[[input$select_profile]]))
-    updateSliderInput(session, "trim_scans",
-                      min = min(profiles$data[[input$select_profile]]@data$scan),
-                      max = max(profiles$data[[input$select_profile]]@data$scan))
-  })
+
   output$summary <- renderPrint(
     # workaround for oce function not liking null data
     if(!is.null(profiles$data[[input$select_profile]]))
@@ -75,6 +75,7 @@ shinyServer(function(input, output, session) {
     # workaround for plot function not liking null data
     if(!is.null(profiles$data[[input$select_profile]]))
     plotScan(profiles$data[[input$select_profile]])
+    abline(v = input$trim_scans)
     })
   output$profile_plot = renderPlot({
     # workaround for plot function not liking null data
@@ -96,4 +97,5 @@ shinyServer(function(input, output, session) {
               lng = profiles$data[[input$select_profile]]@metadata$longitude,
               zoom = 7)
   )
+  output$debug = renderPrint({NULL})
 })
