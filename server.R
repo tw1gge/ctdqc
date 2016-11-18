@@ -14,7 +14,7 @@ library(leaflet)
 
 shinyServer(function(input, output, session) {
 
-  volumes <- c("C:"="C:\\")
+  volumes = getVolumes()
   shinyDirChoose(input, 'directory', roots=volumes, session=session, restrictions=system.file(package='base'))
   output$directory = renderText({parseDirPath(volumes, input$directory)})
 
@@ -82,6 +82,12 @@ shinyServer(function(input, output, session) {
     # workaround for oce function not liking null data
     if(!is.null(profiles$data[[input$select_profile]]))
     summary(profiles$data[[input$select_profile]])
+    )
+  output$xml <- renderPrint(
+    # workaround for oce function not liking null data
+      if(!is.null(profiles$data[[input$select_profile]])){
+        profiles$data[[input$select_profile]]@metadata["header"]
+      }
     )
   output$scan_plot = renderPlot({
     # workaround for plot function not liking null data

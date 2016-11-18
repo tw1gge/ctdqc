@@ -26,12 +26,6 @@ shinyUI(fluidPage(
       actionButton('dump', "DUMP", icon=icon("floppy-o")),
       selectInput('select_profile', "Select profile", choices = NULL),
 
-      h4("Process"),
-      selectInput('optode_vchannels', "Optode Temperature channel", choices = vchannels, selected = "V4"),
-      actionButton('optode', "Process Optode", icon=icon("life-ring")),
-      selectInput('rinko_vchannels', "RINKO Temperature channel", choices = vchannels, selected = "V6"),
-      actionButton('rinko', "Process RINKO", icon=icon("times-circle-o")),
-
       h4("Trim"),
       actionButton('trim', "Trim", icon=icon("scissors")),
       actionButton('autotrim', "Autotrim", icon=icon("scissors")),
@@ -56,7 +50,23 @@ shinyUI(fluidPage(
                  plotOutput("profile_plot")),
         tabPanel("TS Plot", plotOutput("TS_plot")),
         tabPanel("Map", leafletOutput("map")),
-        tabPanel("Sensors"),
+        tabPanel("Sensors",
+                 inputPanel(
+                   h4("Optode"),
+                   selectInput("optode_foil", "Optode foil Batch #", choices = NULL),
+                   selectInput('optode_vchannels', "Optode Temperature channel", choices = vchannels, selected = "V4"),
+                   actionButton('optode', "Process Optode", icon=icon("life-ring"))
+                 ),
+                 inputPanel(
+                   h4("RINKO"),
+                   selectInput('rinko_vchannels', "RINKO Temperature channel", choices = vchannels, selected = "V6"),
+                   actionButton('rinko', "Process RINKO", icon=icon("times-circle-o"))
+                 ),
+                 inputPanel(
+                   h4("Flurometer")
+                 ),
+                 verbatimTextOutput("xml")
+                 ),
         tabPanel("Summary", verbatimTextOutput("summary"))
       ),
       verbatimTextOutput("debug")
