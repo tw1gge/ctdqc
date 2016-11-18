@@ -9,6 +9,8 @@ library(shiny)
 library(shinyFiles)
 library(leaflet)
 
+vchannels = c("V0", "V1", "V2", "V3", "V4", "V5", "V6", "V7")
+
 shinyUI(fluidPage(
 
   # Application title
@@ -23,6 +25,12 @@ shinyUI(fluidPage(
       actionButton('revert', "Revert", icon=icon("repeat")),
       actionButton('dump', "DUMP", icon=icon("floppy-o")),
       selectInput('select_profile', "Select profile", choices = NULL),
+
+      h4("Process"),
+      selectInput('optode_vchannels', "Optode Temperature channel", choices = vchannels, selected = "V4"),
+      actionButton('optode', "Process Optode", icon=icon("life-ring")),
+      selectInput('rinko_vchannels', "RINKO Temperature channel", choices = vchannels, selected = "V6"),
+      actionButton('rinko', "Process RINKO", icon=icon("times-circle-o")),
 
       h4("Trim"),
       actionButton('trim', "Trim", icon=icon("scissors")),
@@ -39,7 +47,13 @@ shinyUI(fluidPage(
     mainPanel(
       tabsetPanel(
         tabPanel("Scan Plot", plotOutput("scan_plot", brush = brushOpts("scan_brush", direction = "x"))),
-        tabPanel("Profile Plot", plotOutput("profile_plot")),
+        tabPanel("Profile Plot",
+                 fluidRow(
+                   column(4, selectInput("y", "Y axis", choices = NULL)),
+                   column(4, selectInput("x1", "X axis 1", choices = NULL)),
+                   column(4, selectInput("x2", "X axis 2", choices = NULL))
+                 ),
+                 plotOutput("profile_plot")),
         tabPanel("TS Plot", plotOutput("TS_plot")),
         tabPanel("Map", leafletOutput("map")),
         tabPanel("Sensors"),

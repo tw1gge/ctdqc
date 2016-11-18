@@ -65,6 +65,18 @@ shinyServer(function(input, output, session) {
   observe({
     updateSelectInput(session, "select_profile", choices = names(profiles$original))
     })
+  observe({
+    # workaround for oce function not liking null data
+      if(!is.null(profiles$data[[input$select_profile]])){
+        choices = names(profiles$data[[input$select_profile]]@data)
+        if("salinity" %in% choices){default_x1 = "salinity"}else{default_x1 = NULL}
+        if("temperature" %in% choices){default_x2 = "temperature"}else{default_x2 = NULL}
+        if("pressure" %in% choices){default_y = "pressure"}else{default_y = NULL}
+        updateSelectInput(session, "x1", choices = choices, selected = default_x1)
+        updateSelectInput(session, "x2", choices = choices, selected = default_x2)
+        updateSelectInput(session, "y", choices = choices, selected = default_y)
+      }
+    })
 
   output$summary <- renderPrint(
     # workaround for oce function not liking null data
@@ -78,9 +90,17 @@ shinyServer(function(input, output, session) {
     abline(v = input$trim_scans)
     })
   output$profile_plot = renderPlot({
-    # workaround for plot function not liking null data
-    if(!is.null(profiles$data[[input$select_profile]]))
-    plotProfile(profiles$data[[input$select_profile]])
+      if(!is.null(profiles$data[[input$select_profile]])){
+        x1 = unlist(profiles$data[[input$select_profile]]@data[input$x1])
+        x2 = unlist(profiles$data[[input$select_profile]]@data[input$x2])
+        y = unlist(profiles$data[[input$select_profile]]@data[input$y])
+        ylim = rev(range(y))
+        plot(x = x1, y = y, type = "l", ylim = ylim, xlab = input$x1, ylab = input$y)
+        par(new = T)
+        plot(x = x2, y = y, type = "l", ylim = ylim, axes = F, xlab = NA, ylab = NA, col = "red")
+        axis(side = 3)
+        mtext(input$x2, side = 3, line = 3)
+      }
     })
   output$TS_plot = renderPlot({
     # workaround for plot function not liking null data
