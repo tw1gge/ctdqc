@@ -128,6 +128,20 @@ shinyServer(function(input, output, session) {
     })
   })
 
+  observeEvent(input$apply_flag,{
+    warning("not implemented")
+  })
+
+  observeEvent(input$apply_factor,{
+    print("applying factor")
+    raw = profiles$data[[input$select_profile]]@data[[input$x1]]
+    mod = (raw * input$factor) + input$offset
+    profiles$data[[input$select_profile]]@data[[input$x1]] = mod
+    processingLog(profiles$data[[input$select_profile]]) = paste(input$x1,
+                                                                 ",adjusted with factor", input$factor,
+                                                                 ", offset", input$offset)
+  })
+
     # update select input when filelist changes
   observe({
     updateSelectInput(session, "select_profile", choices = names(profiles$original))
@@ -169,13 +183,13 @@ shinyServer(function(input, output, session) {
     })
   output$profile_plot = renderPlot({
       if(!is.null(profiles$data[[input$select_profile]])){
-        x1 = unlist(profiles$data[[input$select_profile]]@data[input$x1])
-        x2 = unlist(profiles$data[[input$select_profile]]@data[input$x2])
-        y = unlist(profiles$data[[input$select_profile]]@data[input$y])
+        x1 = profiles$data[[input$select_profile]]@data[[input$x1]]
+        x2 = profiles$data[[input$select_profile]]@data[[input$x2]]
+        y = profiles$data[[input$select_profile]]@data[[input$y]]
         ylim = rev(range(y))
-        plot(x = x1, y = y, type = "l", ylim = ylim, xlab = input$x1, ylab = input$y, col = "blue")
+        plot(x = x2, y = y, type = "l", ylim = ylim, xlab = input$x1, ylab = input$y, col = "red")
         par(new = T)
-        plot(x = x2, y = y, type = "l", ylim = ylim, axes = F, xlab = NA, ylab = NA, col = "red")
+        plot(x = x1, y = y, type = "l", ylim = ylim, axes = F, xlab = NA, ylab = NA, col = "blue")
         axis(side = 3)
         mtext(input$x2, side = 3, line = 3)
       }

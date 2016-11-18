@@ -26,9 +26,6 @@ shinyUI(fluidPage(
       actionButton('revert', "Revert", icon=icon("repeat")),
       selectInput('select_profile', "Select profile", choices = NULL),
 
-      h4("Flag"),
-      actionButton('flag', "Apply Flag", icon=icon("flag")),
-
       h4("Decimate"),
       numericInput('bin_size', "Bin Size (m)", min = 0.5, max = 5, value = 0.5, step = 0.5, width = "50%"),
       actionButton('decimate', "Decimate", icon=icon("delicious")),
@@ -51,26 +48,42 @@ shinyUI(fluidPage(
         tabPanel("Profile Plot",
                  fluidRow(
                    column(4, selectInput("y", "Y axis", choices = NULL)),
-                   column(4, selectInput("x1", "Blue X axis", choices = NULL)),
-                   column(4, selectInput("x2", "Red X axis", choices = NULL))
+                   column(4, selectInput("x1", "Primary X axis", choices = NULL)),
+                   column(4, selectInput("x2", "Secondary X axis", choices = NULL))
                  ),
-                 plotOutput("profile_plot")),
+                 plotOutput("profile_plot"),
+                 h6("Flags and factors are applied to the primary axis only"),
+                 h4("Flag"),
+                 actionButton('apply_flag', "Apply Flag", icon=icon("flag")),
+                 h4("Factor / Offset"),
+                 fluidRow(
+                   column(6, numericInput('factor', label = "Factor", value = 1)),
+                   column(6, numericInput('offset', label = "Offset", value = 0))
+                 ),
+                 actionButton('apply_factor', "Apply Factor + Offset", icon=icon("flag"))
+                 ),
         tabPanel("TS Plot", plotOutput("TS_plot")),
         tabPanel("Map", leafletOutput("map")),
         tabPanel("Sensors",
                  inputPanel(
                    h4("Optode"),
+                   fluidRow(
+                     column(6, selectInput('optode_T_channel', "Optode Temperature channel", choices = vchannels, selected = "v6") ),
+                     column(6, selectInput('optode_dphase_channel', "Optode dPhase channel", choices = vchannels, selected = "v7") )
+                   ),
                    selectInput("optode_foil", "Optode foil Batch #", choices = NULL),
-                   selectInput('optode_T_channel', "Optode Temperature channel", choices = vchannels, selected = "v6"),
-                   selectInput('optode_dphase_channel', "Optode dPhase channel", choices = vchannels, selected = "v7"),
                    actionButton('optode', "Process Optode", icon=icon("life-ring"))
                  ),
                  inputPanel(
                    h4("RINKO"),
-                   selectInput('rinko_T_channel', "RINKO Temperature channel", choices = vchannels, selected = "v4"),
-                   selectInput('rinko_O_channel', "RINKO Oxygen channel", choices = vchannels, selected = "v5"),
-                   numericInput('rinko_G', label = "G", value = 0),
-                   numericInput('rinko_H', label = "H", value = 1),
+                   fluidRow(
+                     column(6, selectInput('rinko_T_channel', "RINKO Temperature channel", choices = vchannels, selected = "v4") ),
+                     column(6, selectInput('rinko_O_channel', "RINKO Oxygen channel", choices = vchannels, selected = "v5") )
+                   ),
+                   fluidRow(
+                     column(6, numericInput('rinko_G', label = "G", value = 0)),
+                     column(6, numericInput('rinko_H', label = "H", value = 1))
+                   ),
                    actionButton('rinko', "Process RINKO", icon=icon("times-circle-o"))
                  ),
                  inputPanel(
