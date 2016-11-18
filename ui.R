@@ -42,7 +42,12 @@ shinyUI(fluidPage(
     # Show a plot of the generated distribution
     mainPanel(
       tabsetPanel(
-        tabPanel("Scan Plot", plotOutput("scan_plot", brush = brushOpts("scan_brush", direction = "x"))),
+        tabPanel("Scan Plot",
+                 plotOutput("scan_plot", brush = brushOpts("scan_brush", direction = "x")),
+                 h4("Trim"),
+                 actionButton('trim', "Trim", icon=icon("scissors")),
+                 actionButton('autotrim', "Autotrim", icon=icon("scissors"))
+                 ),
         tabPanel("Profile Plot",
                  fluidRow(
                    column(4, selectInput("y", "Y axis", choices = NULL)),
@@ -55,7 +60,7 @@ shinyUI(fluidPage(
         tabPanel("Sensors",
                  inputPanel(
                    h4("Optode"),
-                   selectInput("optode_foil", "Optode foil Batch #", choices = unique(optode_coefs$batch)),
+                   selectInput("optode_foil", "Optode foil Batch #", choices = NULL),
                    selectInput('optode_T_channel', "Optode Temperature channel", choices = vchannels, selected = "v6"),
                    selectInput('optode_dphase_channel', "Optode dPhase channel", choices = vchannels, selected = "v7"),
                    actionButton('optode', "Process Optode", icon=icon("life-ring"))

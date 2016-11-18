@@ -12,7 +12,6 @@ library(data.table)
 library(cefasMOS)
 library(leaflet)
 
-optode_coefs = read.csv("optode_coefs.csv")
 rinko_coefs = list(serial = "#0263 ARO-CAV", A = -42.34162, B = +127.6475, C = -0.3677435, D = +0.01137, E = +0.0046, F = +7.57e-05)
 
 shinyServer(function(input, output, session) {
@@ -23,6 +22,8 @@ shinyServer(function(input, output, session) {
 
     # make dynamic file list
   filelist = reactive({ list.files(parseDirPath(volumes, input$directory), full.names = F, pattern = "*.cnv") })
+
+  optode_coefs = read.csv("optode_coefs.csv")
 
   profiles = reactiveValues(data = NULL)
 
@@ -144,6 +145,9 @@ shinyServer(function(input, output, session) {
         updateSelectInput(session, "select_factor", choices = choices)
         updateSelectInput(session, "select_flag", choices = choices)
       }
+    })
+  observe({
+    updateSelectInput(session, "optode_foil", choices = unique(optode_coefs$batch), selected = "1707")
     })
 
   output$summary <- renderPrint(
