@@ -20,10 +20,10 @@ shinyUI(fluidPage(
   sidebarLayout(
     sidebarPanel(
       textOutput('directory'),
-      shinyDirButton('directory', 'Select CNV Folder', 'Please select a folder'),
+      shinyDirButton('directory', 'Select Folder', 'Please select a folder'),
       actionButton('read_files', "Read CNV files", icon=icon("book")),
+      actionButton('read_rdata', "Read Rdata file", icon=icon("registered")),
       actionButton('revert', "Revert", icon=icon("repeat")),
-      actionButton('dump', "DUMP", icon=icon("floppy-o")),
       selectInput('select_profile', "Select profile", choices = NULL),
 
       h4("Trim"),
@@ -32,8 +32,11 @@ shinyUI(fluidPage(
 
       h4("Decimate"),
       numericInput('bin_size', "Bin Size (m)", min = 0.5, max = 5, value = 0.5, step = 0.5),
-      actionButton('decimate', "Decimate", icon=icon("delicious"))
+      actionButton('decimate', "Decimate", icon=icon("delicious")),
 
+      h4("Save"),
+      actionButton('write_rdata', "Write Rdata", icon=icon("bookmark")),
+      actionButton('write_csv', "Write csv's", icon=icon("table"))
 
     ),
 

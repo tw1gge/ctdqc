@@ -19,7 +19,7 @@ shinyServer(function(input, output, session) {
 
   volumes = getVolumes()
   shinyDirChoose(input, 'directory', roots=volumes, session=session, restrictions=system.file(package='base'))
-  output$directory = renderText({parseDirPath(volumes, input$directory)})
+  output$directory = renderText({paste0(parseDirPath(volumes, input$directory), "/")})
 
     # make dynamic file list
   filelist = reactive({ list.files(parseDirPath(volumes, input$directory), full.names = F, pattern = "*.cnv") })
@@ -40,6 +40,14 @@ shinyServer(function(input, output, session) {
     profiles$data = d
     profiles$original = d
     profiles$positions = rbindlist(lapply( profiles$data , function(x) `@`( x , metadata)[c("filename", "startTime", "station", "longitude", "latitude")]))
+  })
+
+  observeEvent(input$read_rdata,{
+    dir = parseDirPath(volumes, input$directory)
+    load(paste0(dir, "/CTDQC.rdata"))
+    profiles$data = session$data
+    profiles$original = session$original
+    profiles$positions = session$positions
   })
 
   observeEvent(input$trim,{
@@ -103,8 +111,20 @@ shinyServer(function(input, output, session) {
 
   })
 
-  observeEvent(input$save,{
-    save(profiles$data, file = "working.rdata")
+  observeEvent(input$write_rdata,{
+    dir = parseDirPath(volumes, input$directory)
+    session = profiles
+    save(session, file = paste0(dir, "/CTDQC.rdata"))
+  })
+
+  observeEvent(input$write_csv,{
+    dir = parseDirPath(volumes, input$directory)
+    withProgress(message = 'writing files...', value = 0, {
+      for(p in names(profiles$data)){
+        incProgress(1/length(profiles$data), detail = paste("writing", p))
+        write.ctd(profiles$data[[p]], file = paste0(p, ".csv"))
+      }
+    })
   })
 
     # update select input when filelist changes
