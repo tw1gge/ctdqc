@@ -20,21 +20,20 @@ shinyServer(function(input, output, session) {
   shinyDirChoose(input, 'directory', roots=volumes, session=session, restrictions=system.file(package='base'))
   output$directory = renderText({paste0(parseDirPath(volumes, input$directory), "/")})
 
-    # make dynamic file list
-  filelist = reactive({ list.files(parseDirPath(volumes, input$directory), full.names = F, pattern = "*.cnv") })
-
   optode_coefs = read.csv("optode_coefs.csv")
 
   profiles = reactiveValues(data = NULL)
 
     # read CNV files
   observeEvent(input$read_files, {
+    filelist = list.files(parseDirPath(volumes, input$directory), full.names = F, pattern = "*.cnv")
     dir = parseDirPath(volumes, input$directory)
     d = list()
+    b = list()
     withProgress(message = 'loading files...', value = 0, {
-      for(i in filelist()){
+      for(i in filelist){
         # Increment the progress bar, and update the detail text.
-        incProgress(1/length(filelist()), detail = paste("loading", i))
+        incProgress(1/length(filelist), detail = paste("loading", i))
         d[[i]] = read.ctd.sbe(paste0(dir,"/",i))
       }
     })
@@ -133,13 +132,16 @@ shinyServer(function(input, output, session) {
   })
 
   observeEvent(input$apply_factor,{
-    print("applying factor")
     raw = profiles$data[[input$select_profile]]@data[[input$x1]]
     mod = (raw * input$factor) + input$offset
     profiles$data[[input$select_profile]]@data[[input$x1]] = mod
     processingLog(profiles$data[[input$select_profile]]) = paste(input$x1,
                                                                  ",adjusted with factor", input$factor,
                                                                  ", offset", input$offset)
+  })
+
+  observeEvent(input$read_bottles,{
+    print("loading bottles")
   })
 
     # update select input when filelist changes
