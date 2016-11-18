@@ -26,12 +26,11 @@ shinyUI(fluidPage(
       actionButton('revert', "Revert", icon=icon("repeat")),
       selectInput('select_profile', "Select profile", choices = NULL),
 
-      h4("Trim"),
-      actionButton('trim', "Trim", icon=icon("scissors")),
-      actionButton('autotrim', "Autotrim", icon=icon("scissors")),
+      h4("Flag"),
+      actionButton('flag', "Apply Flag", icon=icon("flag")),
 
       h4("Decimate"),
-      numericInput('bin_size', "Bin Size (m)", min = 0.5, max = 5, value = 0.5, step = 0.5),
+      numericInput('bin_size', "Bin Size (m)", min = 0.5, max = 5, value = 0.5, step = 0.5, width = "50%"),
       actionButton('decimate', "Decimate", icon=icon("delicious")),
 
       h4("Save"),

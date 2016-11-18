@@ -141,6 +141,8 @@ shinyServer(function(input, output, session) {
         updateSelectInput(session, "x1", choices = choices, selected = default_x1)
         updateSelectInput(session, "x2", choices = choices, selected = default_x2)
         updateSelectInput(session, "y", choices = choices, selected = default_y)
+        updateSelectInput(session, "select_factor", choices = choices)
+        updateSelectInput(session, "select_flag", choices = choices)
       }
     })
 
