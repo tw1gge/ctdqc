@@ -72,8 +72,8 @@ shinyUI(fluidPage(
                  inputPanel(
                    h4("Optode"),
                    fluidRow(
-                     column(6, selectInput('optode_T_channel', "Optode Temperature channel", choices = vchannels, selected = "v6") ),
-                     column(6, selectInput('optode_dphase_channel', "Optode dPhase channel", choices = vchannels, selected = "v7") )
+                     column(6, selectInput('optode_T_channel', "Optode Temperature channel", choices = vchannels, selected = "v7") ),
+                     column(6, selectInput('optode_dphase_channel', "Optode dPhase channel", choices = vchannels, selected = "v6") )
                    ),
                    selectInput("optode_foil", "Optode foil Batch #", choices = NULL),
                    actionButton('optode', "Process Optode", icon=icon("life-ring"))
@@ -81,8 +81,8 @@ shinyUI(fluidPage(
                  inputPanel(
                    h4("RINKO"),
                    fluidRow(
-                     column(6, selectInput('rinko_T_channel', "RINKO Temperature channel", choices = vchannels, selected = "v4") ),
-                     column(6, selectInput('rinko_O_channel', "RINKO Oxygen channel", choices = vchannels, selected = "v5") )
+                     column(6, selectInput('rinko_T_channel', "RINKO Temperature channel", choices = vchannels, selected = "v5") ),
+                     column(6, selectInput('rinko_O_channel', "RINKO Oxygen channel", choices = vchannels, selected = "v4") )
                    ),
                    fluidRow(
                      column(6, numericInput('rinko_G', label = "G", value = 0)),

@@ -226,11 +226,11 @@ shinyServer(function(input, output, session) {
         x2 = profiles$data[[input$select_profile]]@data[[input$x2]]
         y = profiles$data[[input$select_profile]]@data[[input$y]]
         ylim = rev(range(y))
-        plot(x = x2, y = y, type = "l", ylim = ylim, xlab = input$x1, ylab = input$y, col = "blue")
+        plot(x = x2, y = y, type = "l", ylim = ylim, xlab = input$x2, ylab = input$y, col = "red")
         par(new = T)
-        plot(x = x1, y = y, type = "l", ylim = ylim, axes = F, xlab = NA, ylab = NA, col = "red")
+        plot(x = x1, y = y, type = "l", ylim = ylim, axes = F, xlab = NA, ylab = NA, col = "blue")
         axis(side = 3)
-        mtext(input$x2, side = 3, line = 3)
+        mtext(input$x1, side = 3, line = 3)
       }
     })
   output$TS_plot = renderPlot({
@@ -252,6 +252,7 @@ shinyServer(function(input, output, session) {
     data.frame(profiles$data[[input$select_profile]]@data)
   })
   output$bottles = renderPrint({
+    # TODO make it work for all bottles
     scans = profiles$bottle_scans[[input$select_profile]]
     dt = data.table(data.frame(profiles$data[[input$select_profile]]@data))
     for(b in unique(scans$bottle)){
