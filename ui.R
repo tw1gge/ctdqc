@@ -21,7 +21,8 @@ shinyUI(fluidPage(
     sidebarPanel(
       textOutput('directory'),
       shinyDirButton('directory', 'Select Folder', 'Please select a folder'),
-      actionButton('read_files', "Read CNV files", icon=icon("book")),
+      actionButton('read_files', "Read .cnv files", icon=icon("book")),
+      actionButton('read_bottle', "Read .bl files", icon=icon("flask")),
       actionButton('read_rdata', "Read Rdata file", icon=icon("registered")),
       actionButton('revert', "Revert", icon=icon("repeat")),
       selectInput('select_profile', "Select profile", choices = NULL),
@@ -64,6 +65,7 @@ shinyUI(fluidPage(
                  ),
         tabPanel("TS Plot", plotOutput("TS_plot")),
         tabPanel("Map", leafletOutput("map")),
+        tabPanel("Bottles", verbatimTextOutput("bottles")),
         tabPanel("Sensors",
                  inputPanel(
                    h4("Optode"),

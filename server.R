@@ -22,6 +22,8 @@ shinyServer(function(input, output, session) {
 
   optode_coefs = read.csv("optode_coefs.csv")
 
+  # make dynamic file list
+
   profiles = reactiveValues(data = NULL)
 
     # read CNV files
@@ -29,17 +31,39 @@ shinyServer(function(input, output, session) {
     filelist = list.files(parseDirPath(volumes, input$directory), full.names = F, pattern = "*.cnv")
     dir = parseDirPath(volumes, input$directory)
     d = list()
-    b = list()
     withProgress(message = 'loading files...', value = 0, {
       for(i in filelist){
         # Increment the progress bar, and update the detail text.
         incProgress(1/length(filelist), detail = paste("loading", i))
         d[[i]] = read.ctd.sbe(paste0(dir,"/",i))
+        # check if bl file exists and if so load it
       }
     })
     profiles$data = d
     profiles$original = d
     profiles$positions = rbindlist(lapply( profiles$data , function(x) `@`( x , metadata)[c("filename", "startTime", "station", "longitude", "latitude")]))
+  })
+
+  observeEvent(input$read_bottle, {
+    filelist = list.files(parseDirPath(volumes, input$directory), full.names = F, pattern = "*.cnv")
+    bottlelist = list.files(parseDirPath(volumes, input$directory), full.names = F, pattern = "*.bl")
+    dir = parseDirPath(volumes, input$directory)
+    b = list()
+    withProgress(message = 'loading files...', value = 0, {
+      for(i in filelist){
+        # Increment the progress bar, and update the detail text.
+        incProgress(1/length(filelist), detail = paste("loading", i))
+        # matching
+        botfile = gsub(".cnv", ".bl", i)
+        if(botfile %in% bottlelist){
+          dat = read.csv(paste0(dir,"/",botfile), skip = 2, header = F)
+          print(dat)
+          # colnames(dat) = c("seq", "bottle", "date", "start", "end")
+        }else{dat = "No bottles"}
+        b[[i]] = dat
+      }
+    })
+    profiles$bottle_scans = b
   })
 
   observeEvent(input$read_rdata,{
@@ -140,9 +164,6 @@ shinyServer(function(input, output, session) {
                                                                  ", offset", input$offset)
   })
 
-  observeEvent(input$read_bottles,{
-    print("loading bottles")
-  })
 
     # update select input when filelist changes
   observe({
@@ -211,7 +232,9 @@ shinyServer(function(input, output, session) {
               lng = profiles$data[[input$select_profile]]@metadata$longitude,
               zoom = 7)
   )
-  output$debug = renderPrint({NULL})
+  output$debug = renderPrint({
+     profiles$bottle_scans[[input$select_profile]]
+  })
 })
 
 optode.analogtemp <- function(v){
