@@ -226,9 +226,9 @@ shinyServer(function(input, output, session) {
         x2 = profiles$data[[input$select_profile]]@data[[input$x2]]
         y = profiles$data[[input$select_profile]]@data[[input$y]]
         ylim = rev(range(y))
-        plot(x = x2, y = y, type = "l", ylim = ylim, xlab = input$x1, ylab = input$y, col = "red")
+        plot(x = x2, y = y, type = "l", ylim = ylim, xlab = input$x1, ylab = input$y, col = "blue")
         par(new = T)
-        plot(x = x1, y = y, type = "l", ylim = ylim, axes = F, xlab = NA, ylab = NA, col = "blue")
+        plot(x = x1, y = y, type = "l", ylim = ylim, axes = F, xlab = NA, ylab = NA, col = "red")
         axis(side = 3)
         mtext(input$x2, side = 3, line = 3)
       }

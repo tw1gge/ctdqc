@@ -50,8 +50,8 @@ shinyUI(fluidPage(
         tabPanel("Profile Plot",
                  fluidRow(
                    column(4, selectInput("y", "Y axis", choices = NULL)),
-                   column(4, selectInput("x1", "Primary X axis", choices = NULL)),
-                   column(4, selectInput("x2", "Secondary X axis", choices = NULL))
+                   column(4, selectInput("x1", "Primary (Blue) X axis", choices = NULL)),
+                   column(4, selectInput("x2", "Secondary (Red) X axis", choices = NULL))
                  ),
                  plotOutput("profile_plot"),
                  h6("Flags and factors are applied to the primary axis only"),
