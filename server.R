@@ -73,6 +73,9 @@ shinyServer(function(input, output, session) {
     profiles$positions = session$positions
   })
 
+  observeEvent(input$pumped,{
+    profiles$data[[input$select_profile]] = subset(profiles$data[[input$select_profile]], pumpStatus == 1)
+  })
   observeEvent(input$trim,{
     profiles$data[[input$select_profile]] = ctdTrim(profiles$data[[input$select_profile]],
                                                     method = "scan", parameters = round(c(input$scan_brush$xmin, input$scan_brush$xmax)))
@@ -80,6 +83,7 @@ shinyServer(function(input, output, session) {
   observeEvent(input$autotrim,{
     profiles$data[[input$select_profile]] = ctdTrim(profiles$data[[input$select_profile]], parameters = list(pmin=1))
   })
+
 
   observeEvent(input$decimate,{
     profiles$data[[input$select_profile]] = ctdDecimate(profiles$data[[input$select_profile]],
@@ -100,6 +104,7 @@ shinyServer(function(input, output, session) {
         profiles$data[[input$select_profile]]@data[[input$optode_dphase_channel]]
         )
     optode_oxygen = optode.phaseCalc(optode_Dphase, optode_temperature, subset(optode_coefs, batch == input$optode_foil))
+    # TODO salinity correction
     profiles$data[[input$select_profile]] = ctdAddColumn(profiles$data[[input$select_profile]],
                                                          optode_temperature, "temperature_optode", label = "temperature",
                                                          unit = list(name=expression(degree*C), scale="Optode"))
@@ -133,6 +138,17 @@ shinyServer(function(input, output, session) {
                                                                  ",G =", input$rinko_G,
                                                                  ",H =", input$rinko_H)
 
+  })
+
+  observeEvent(input$licor, {
+    licor_par = par_from_voltage(
+        profiles$data[[input$select_profile]]@data[[input$par_channel]],
+        input$licor_factor, input$licor_offset)
+
+    profiles$data[[input$select_profile]] = ctdAddColumn(profiles$data[[input$select_profile]],
+                                                         licor_par, "par", label = "par",
+                                                         unit = list(name = expression(uE), scale = "PAR/Irradiance, Cefas Licor"))
+    processingLog(profiles$data[[input$select_profile]]) = paste("PAR processed with factor =", input$licor_factor, ",offset =", input$licor_offset)
   })
 
   observeEvent(input$write_rdata,{
@@ -265,5 +281,8 @@ optode.phaseCalc <- function(DPhase, Temp, coefs){
       DPhase^3+(C4[1]+C4[2]*Temp+C4[3]*Temp^2+C4[4]*Temp^3) *
       DPhase^4
     })
+}
+par_from_voltage <- function(x, factor, offset){
+    return(factor * exp(offset * x))
 }
 

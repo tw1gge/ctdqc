@@ -43,6 +43,7 @@ shinyUI(fluidPage(
         tabPanel("Scan Plot",
                  plotOutput("scan_plot", brush = brushOpts("scan_brush", direction = "x")),
                  h4("Trim"),
+                 actionButton('pumped', "Subset pump", icon=icon("battery-1")),
                  actionButton('trim', "Trim", icon=icon("scissors")),
                  actionButton('autotrim', "Autotrim", icon=icon("scissors"))
                  ),
@@ -88,6 +89,15 @@ shinyUI(fluidPage(
                      column(6, numericInput('rinko_H', label = "H", value = 1))
                    ),
                    actionButton('rinko', "Process RINKO", icon=icon("times-circle-o"))
+                 ),
+                 inputPanel(
+                   h4("Licor PAR"),
+                   fluidRow(
+                     column(6, selectInput('par_channel', "PAR channel", choices = vchannels, selected = "v0") )
+                   ),
+                   numericInput('licor_factor', label = "Licor factor", value = 0.22345679),
+                   numericInput('licor_offset', label = "Licor offset", value = 3.3737),
+                   actionButton('licor', "Process Licor PAR", icon=icon("beer"))
                  ),
                  inputPanel(
                    h4("Flurometer")
