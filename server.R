@@ -57,8 +57,7 @@ shinyServer(function(input, output, session) {
         botfile = gsub(".cnv", ".bl", i)
         if(botfile %in% bottlelist){
           dat = read.csv(paste0(dir,"/",botfile), skip = 2, header = F)
-          print(dat)
-          # colnames(dat) = c("seq", "bottle", "date", "start", "end")
+          colnames(dat) = c("seq", "bottle", "dateTime", "start", "end")
         }else{dat = "No bottles"}
         b[[i]] = dat
       }
@@ -232,9 +231,20 @@ shinyServer(function(input, output, session) {
               lng = profiles$data[[input$select_profile]]@metadata$longitude,
               zoom = 7)
   )
-  output$debug = renderPrint({
-     profiles$bottle_scans[[input$select_profile]]
+  output$datatable = renderDataTable({
+    data.frame(profiles$data[[input$select_profile]]@data)
   })
+  output$bottles = renderPrint({
+    scans = profiles$bottle_scans[[input$select_profile]]
+    dt = data.table(data.frame(profiles$data[[input$select_profile]]@data))
+    for(b in unique(scans$bottle)){
+      dt[scan > scans$start[b] & scan < scans$end[b], c("bottle", "dateTime") := list(scans$bottle[b], scans$dateTime[b])]
+    }
+    potential = c("depth", "salinity", "salinity2", "fluorescence", "oxygen_optode")
+    SDcols = names(dt)[names(dt) %in% potential]
+    dt[,lapply(.SD, mean), .SDcols = SDcols, by = list(bottle, dateTime)]
+  })
+  output$debug = renderPrint({ NULL })
 })
 
 optode.analogtemp <- function(v){

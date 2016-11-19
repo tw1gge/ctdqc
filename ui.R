@@ -64,6 +64,7 @@ shinyUI(fluidPage(
                  actionButton('apply_factor', "Apply Factor + Offset", icon=icon("flag"))
                  ),
         tabPanel("TS Plot", plotOutput("TS_plot")),
+        tabPanel("Table", dataTableOutput("datatable")),
         tabPanel("Map", leafletOutput("map")),
         tabPanel("Bottles", verbatimTextOutput("bottles")),
         tabPanel("Sensors",
