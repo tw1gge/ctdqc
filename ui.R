@@ -8,6 +8,7 @@
 library(shiny)
 library(shinyFiles)
 library(leaflet)
+library(rhandsontable)
 
 vchannels = c("v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7")
 
@@ -67,7 +68,7 @@ shinyUI(fluidPage(
         tabPanel("TS Plot", plotOutput("TS_plot")),
         tabPanel("Table", dataTableOutput("datatable")),
         tabPanel("Map", leafletOutput("map")),
-        tabPanel("Bottles", verbatimTextOutput("bottles")),
+        tabPanel("Bottles", rHandsontableOutput("bottles")),
         tabPanel("Sensors",
                  inputPanel(
                    h4("Optode"),
@@ -105,8 +106,8 @@ shinyUI(fluidPage(
                  verbatimTextOutput("xml")
                  ),
         tabPanel("Summary", verbatimTextOutput("summary"))
-      ),
-      verbatimTextOutput("debug")
+      )
+      #, verbatimTextOutput("debug")
     )
   )
 ))

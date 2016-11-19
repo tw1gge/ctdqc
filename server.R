@@ -9,21 +9,19 @@ library(shiny)
 library(shinyFiles)
 library(oce)
 library(data.table)
-library(cefasMOS)
 library(leaflet)
+library(rhandsontable)
 
-rinko_coefs = list(serial = "#0263 ARO-CAV", A = -42.34162, B = +127.6475, C = -0.3677435, D = +0.01137, E = +0.0046, F = +7.57e-05)
+source("functions.R", local = T)
 
 shinyServer(function(input, output, session) {
 
+  # find OS disk drives
   volumes = getVolumes()
   shinyDirChoose(input, 'directory', roots=volumes, session=session, restrictions=system.file(package='base'))
   output$directory = renderText({paste0(parseDirPath(volumes, input$directory), "/")})
 
-  optode_coefs = read.csv("optode_coefs.csv")
-
-  # make dynamic file list
-
+  # make dynamic file list for storing the CTD objects, a list of S4 objects
   profiles = reactiveValues(data = NULL)
 
     # read CNV files
@@ -39,12 +37,16 @@ shinyServer(function(input, output, session) {
         # check if bl file exists and if so load it
       }
     })
+      # insert data into data slot
     profiles$data = d
+      # make a backup for use by revert
     profiles$original = d
+      # make a summary of the positions for the map
     profiles$positions = rbindlist(lapply( profiles$data , function(x) `@`( x , metadata)[c("filename", "startTime", "station", "longitude", "latitude")]))
   })
 
   observeEvent(input$read_bottle, {
+      # make two file lists for comparison
     filelist = list.files(parseDirPath(volumes, input$directory), full.names = F, pattern = "*.cnv")
     bottlelist = list.files(parseDirPath(volumes, input$directory), full.names = F, pattern = "*.bl")
     dir = parseDirPath(volumes, input$directory)
@@ -68,6 +70,7 @@ shinyServer(function(input, output, session) {
   observeEvent(input$read_rdata,{
     dir = parseDirPath(volumes, input$directory)
     load(paste0(dir, "/CTDQC.rdata"))
+      # copy data from loaded .rdata file to correct slots
     profiles$data = session$data
     profiles$original = session$original
     profiles$positions = session$positions
@@ -180,7 +183,6 @@ shinyServer(function(input, output, session) {
                                                                  ", offset", input$offset)
   })
 
-
     # update select input when filelist changes
   observe({
     updateSelectInput(session, "select_profile", choices = names(profiles$original))
@@ -221,7 +223,9 @@ shinyServer(function(input, output, session) {
     abline(v = input$trim_scans)
     })
   output$profile_plot = renderPlot({
+    # workaround for plot function not liking null data
       if(!is.null(profiles$data[[input$select_profile]])){
+        # extract data from nested S4 objects (CTD)
         x1 = profiles$data[[input$select_profile]]@data[[input$x1]]
         x2 = profiles$data[[input$select_profile]]@data[[input$x2]]
         y = profiles$data[[input$select_profile]]@data[[input$y]]
@@ -251,39 +255,22 @@ shinyServer(function(input, output, session) {
   output$datatable = renderDataTable({
     data.frame(profiles$data[[input$select_profile]]@data)
   })
-  output$bottles = renderPrint({
+
+  output$bottles = renderRHandsontable({
     # TODO make it work for all bottles
-    scans = profiles$bottle_scans[[input$select_profile]]
-    dt = data.table(data.frame(profiles$data[[input$select_profile]]@data))
-    for(b in unique(scans$bottle)){
-      dt[scan > scans$start[b] & scan < scans$end[b], c("bottle", "dateTime") := list(scans$bottle[b], scans$dateTime[b])]
-    }
-    potential = c("depth", "salinity", "salinity2", "fluorescence", "oxygen_optode")
-    SDcols = names(dt)[names(dt) %in% potential]
-    dt[,lapply(.SD, mean), .SDcols = SDcols, by = list(bottle, dateTime)]
+    # scans = profiles$bottle_scans[[input$select_profile]]
+    # dt = data.table(data.frame(profiles$data[[input$select_profile]]@data))
+    # for(b in unique(scans$bottle)){
+    #   dt[scan > scans$start[b] & scan < scans$end[b], c("bottle", "dateTime") := list(scans$bottle[b], scans$dateTime[b])]
+    # }
+    # potential = c("depth", "salinity", "salinity2", "fluorescence", "oxygen_optode")
+    # SDcols = names(dt)[names(dt) %in% potential]
+    # dt[,lapply(.SD, mean), .SDcols = SDcols, by = list(bottle, dateTime)]
+      # editable table
+    rhandsontable(women, readOnly = F) %>%
+      hot_context_menu(allowRowEdit = FALSE, allowColEdit = FALSE) %>%
+      hot_col("weight", readOnly = T)
   })
-  output$debug = renderPrint({ NULL })
 })
 
-optode.analogtemp <- function(v){
-  return( ((v * 45) / 5) - 5 )
-}
-optode.analogDphase <- function(v){
-  return( 10 + (v / 5) * 60 )
-}
-optode.phaseCalc <- function(DPhase, Temp, coefs){
-  # for mkl optodes 3830 & 3835
-    with(coefs, {
-      print(paste("using foil batch coefs", batch[1]))
-      (C0[1]+C0[2]*Temp+C0[3]*Temp^2+C0[4]*Temp^3) +
-      (C1[1]+C1[2]*Temp+C1[3]*Temp^2+C1[4]*Temp^3) *
-      DPhase+(C2[1]+C2[2]*Temp+C2[3]*Temp^2+C2[4]*Temp^3) *
-      DPhase^2+(C3[1]+C3[2]*Temp+C3[3]*Temp^2+C3[4]*Temp^3) *
-      DPhase^3+(C4[1]+C4[2]*Temp+C4[3]*Temp^2+C4[4]*Temp^3) *
-      DPhase^4
-    })
-}
-par_from_voltage <- function(x, factor, offset){
-    return(factor * exp(offset * x))
-}
 
