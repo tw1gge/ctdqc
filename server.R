@@ -94,10 +94,10 @@ shinyServer(function(input, output, session) {
 
   observeEvent(input$optode, {
     optode_temperature = optode.analogtemp(
-        unlist(profiles$data[[input$select_profile]]@data[input$optode_T_channel])
+        profiles$data[[input$select_profile]]@data[[input$optode_T_channel]]
         )
     optode_Dphase = optode.analogDphase(
-        unlist(profiles$data[[input$select_profile]]@data[input$optode_dphase_channel])
+        profiles$data[[input$select_profile]]@data[[input$optode_dphase_channel]]
         )
     optode_oxygen = optode.phaseCalc(optode_Dphase, optode_temperature, subset(optode_coefs, batch == input$optode_foil))
     profiles$data[[input$select_profile]] = ctdAddColumn(profiles$data[[input$select_profile]],
@@ -112,12 +112,13 @@ shinyServer(function(input, output, session) {
 
   observeEvent(input$rinko, {
     rinko_temperature = rinko_temp(
-        unlist(profiles$data[[input$select_profile]]@data[input$rinko_T_channel])
+        profiles$data[[input$select_profile]]@data[[input$rinko_T_channel]]
         )
     pressure =  unlist(profiles$data[[input$select_profile]]@data["pressure"])
     rinko_oxygen = rinko_o2(
-        unlist(profiles$data[[input$select_profile]]@data[input$rinko_O_channel]),
+        profiles$data[[input$select_profile]]@data[[input$rinko_O_channel]],
         rinko_temperature,
+        S = profiles$data[[input$select_profile]]@data[["salinity"]],
         oC = rinko_coefs,
         G = input$rinko_G,
         H = input$rinko_H
