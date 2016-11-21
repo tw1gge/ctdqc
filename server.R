@@ -24,7 +24,7 @@ shinyServer(function(input, output, session) {
   # make dynamic file list for storing the CTD objects, a list of S4 objects
   profiles = reactiveValues(data = NULL)
 
-    # read CNV files
+   ## read data
   observeEvent(input$read_files, {
     filelist = list.files(parseDirPath(volumes, input$directory), full.names = F, pattern = "*.cnv")
     dir = parseDirPath(volumes, input$directory)
@@ -34,7 +34,6 @@ shinyServer(function(input, output, session) {
         # Increment the progress bar, and update the detail text.
         incProgress(1/length(filelist), detail = paste("loading", i))
         d[[i]] = read.ctd.sbe(paste0(dir,"/",i))
-        # check if bl file exists and if so load it
       }
     })
       # insert data into data slot
@@ -76,6 +75,8 @@ shinyServer(function(input, output, session) {
     profiles$positions = session$positions
   })
 
+  ## Processes
+
   observeEvent(input$pumped,{
     profiles$data[[input$select_profile]] = subset(profiles$data[[input$select_profile]], pumpStatus == 1)
   })
@@ -87,15 +88,27 @@ shinyServer(function(input, output, session) {
     profiles$data[[input$select_profile]] = ctdTrim(profiles$data[[input$select_profile]], parameters = list(pmin=1))
   })
 
-
   observeEvent(input$decimate,{
-    profiles$data[[input$select_profile]] = ctdDecimate(profiles$data[[input$select_profile]],
-                                                        p = input$bin_size)
+    profiles$data[[input$select_profile]] = ctdDecimate(profiles$data[[input$select_profile]], p = input$bin_size)
   })
 
   observeEvent(input$revert,{
     profiles$data[[input$select_profile]] = profiles$original[[input$select_profile]]
   })
+
+  observeEvent(input$apply_flag,{
+    warning("not implemented")
+  })
+
+  observeEvent(input$apply_factor,{
+    raw = profiles$data[[input$select_profile]]@data[[input$x1]]
+    mod = (raw * input$factor) + input$offset
+    profiles$data[[input$select_profile]]@data[[input$x1]] = mod
+    processingLog(profiles$data[[input$select_profile]]) = paste(input$x1,
+                                                                 ",adjusted with factor", input$factor,
+                                                                 ", offset", input$offset)
+  })
+
 
   ## SENSORS
 
@@ -140,7 +153,6 @@ shinyServer(function(input, output, session) {
     processingLog(profiles$data[[input$select_profile]]) = paste("RINKO processed with coefs", rinko_coefs[["serial"]],
                                                                  ",G =", input$rinko_G,
                                                                  ",H =", input$rinko_H)
-
   })
 
   observeEvent(input$licor, {
@@ -153,6 +165,8 @@ shinyServer(function(input, output, session) {
                                                          unit = list(name = expression(uE), scale = "PAR/Irradiance, Cefas Licor"))
     processingLog(profiles$data[[input$select_profile]]) = paste("PAR processed with factor =", input$licor_factor, ",offset =", input$licor_offset)
   })
+
+  ## Write out
 
   observeEvent(input$write_rdata,{
     dir = parseDirPath(volumes, input$directory)
@@ -170,19 +184,7 @@ shinyServer(function(input, output, session) {
     })
   })
 
-  observeEvent(input$apply_flag,{
-    warning("not implemented")
-  })
-
-  observeEvent(input$apply_factor,{
-    raw = profiles$data[[input$select_profile]]@data[[input$x1]]
-    mod = (raw * input$factor) + input$offset
-    profiles$data[[input$select_profile]]@data[[input$x1]] = mod
-    processingLog(profiles$data[[input$select_profile]]) = paste(input$x1,
-                                                                 ",adjusted with factor", input$factor,
-                                                                 ", offset", input$offset)
-  })
-
+  ## Ui and controls
     # update select input when filelist changes
   observe({
     updateSelectInput(session, "select_profile", choices = names(profiles$original))
@@ -204,6 +206,8 @@ shinyServer(function(input, output, session) {
   observe({
     updateSelectInput(session, "optode_foil", choices = unique(optode_coefs$batch), selected = "1707")
     })
+
+  ## Output
 
   output$summary <- renderPrint(
     # workaround for oce function not liking null data
