@@ -101,10 +101,8 @@ shinyUI(fluidPage(
                  rHandsontableOutput("bottles"),
                  fluidRow(
                    h4("CTD / Niskin regressions"),
-                   column(3,
-                     selectInput("Plot_bottle_select", NULL, choices = c("Salinity", "Oxygen Optode", "Oxygen RINKO", "Chlorophyll")),
-                     actionButton("Plot_bottle", "Plot regression", icon=icon("code"))
-                          ),
+                   column(3, selectInput("Plot_bottle_select", NULL,
+                                         choices = c("Salinity", "Oxygen Optode", "Oxygen RINKO", "Chlorophyll"))),
                    column(9,
                      plotOutput("bottle_plot"),
                      tableOutput("bottle_coef")
