@@ -150,8 +150,8 @@ shinyServer(function(input, output, session) {
                                                          unit = list(name = expression(mmol~m-3), scale="Optode"))
     # now subset and apply to $data, don't write subset to log
     x = subset(profiles$untrimmed[[input$select_profile]],
-               scan > min(profiles$data[[input$select_profile]][["scan"]] &
-               scan < max(profiles$data[[input$select_profile]][["scan"]])))
+               scan >= min(profiles$data[[input$select_profile]][["scan"]]) &
+               scan <= max(profiles$data[[input$select_profile]][["scan"]]))
     profiles$data[[input$select_profile]] = ctdAddColumn(profiles$data[[input$select_profile]],
                                                          x[["temperature_optode"]], "temperature_optode", label = "temperature",
                                                          unit = list(name=expression(degree*C), scale="Optode"))
