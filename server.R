@@ -38,10 +38,12 @@ shinyServer(function(input, output, session) {
     })
       # insert data into data slot
     profiles$data = d
+    profiles$untrimmed = d
       # make a backup for use by revert
     profiles$original = d
       # make a summary of the positions for the map
     profiles$positions = rbindlist(lapply( profiles$data , function(x) `@`( x , metadata)[c("filename", "startTime", "station", "longitude", "latitude")]))
+
   })
 
   observeEvent(input$read_bottle, {
@@ -57,13 +59,28 @@ shinyServer(function(input, output, session) {
         # matching
         botfile = gsub(".cnv", ".bl", i)
         if(botfile %in% bottlelist){
-          dat = read.csv(paste0(dir,"/",botfile), skip = 2, header = F)
-          colnames(dat) = c("seq", "bottle", "dateTime", "start", "end")
-        }else{dat = "No bottles"}
-        b[[i]] = dat
+          scans = cbind(i, read.csv(paste0(dir,"/",botfile), skip = 2, header = F))
+          colnames(scans) = c("profile", "fire_seq", "niskin", "dateTime", "start_scan", "end_scan")
+        }
+        b[[i]] = scans
       }
     })
-    profiles$bottle_scans = b
+    scans = rbindlist(b)
+      # for each ctd in the list, extract the data, then for each extract convert to data.frame, then combine
+    dat = rbindlist(lapply(lapply(profiles$untrimmed , function(x) `@`( x , data)), data.frame), idcol = "profile", fill = T)
+      # select only the columns we want, if they are available
+    avail_names = colnames(dat)
+    want_names = c("depth", "salinity", "salinity2", "fluorescence", "oxygen_optode", "oxygen_RINKO")
+    names = na.omit(want_names[chmatch(avail_names, want_names)])
+      # for each bottle, match to scans and profile
+    dat = dat[, c("profile", "scan", names), with = F]
+    dat[, scan0 := scan] # extra column needed for foverlaps
+    setkey(scans, profile, start_scan, end_scan)
+    dat = foverlaps(dat, scans, by.x=c("profile", "scan", "scan0"), nomatch = 0)
+      # calc_mean
+    dat = dat[,lapply(.SD, mean), by = list(profile, fire_seq, niskin, dateTime), .SDcols = names]
+    dat = cbind(dat, data.frame("bottle_sal" = NA, "bottle_O2" = NA, "bottle_Chl" = NA))
+    profiles$bottle_scans = dat
   })
 
   observeEvent(input$read_rdata,{
@@ -148,6 +165,9 @@ shinyServer(function(input, output, session) {
                                                          rinko_temperature, "temperature_RINKO", label = "temperature",
                                                          unit = list(name=expression(degree*C), scale="RINKO"))
     profiles$data[[input$select_profile]] = ctdAddColumn(profiles$data[[input$select_profile]],
+                                                         rinko_oxygen, "oxygen_RINKO", label = "oxygen",
+                                                         unit = list(name = expression(mmol~m-3), scale="RINKO"))
+    profiles$untrimmed[[input$select_profile]] = ctdAddColumn(profiles$original[[input$select_profile]],
                                                          rinko_oxygen, "oxygen_RINKO", label = "oxygen",
                                                          unit = list(name = expression(mmol~m-3), scale="RINKO"))
     processingLog(profiles$data[[input$select_profile]]) = paste("RINKO processed with coefs", rinko_coefs[["serial"]],
@@ -271,10 +291,15 @@ shinyServer(function(input, output, session) {
     # SDcols = names(dt)[names(dt) %in% potential]
     # dt[,lapply(.SD, mean), .SDcols = SDcols, by = list(bottle, dateTime)]
       # editable table
-    rhandsontable(women, readOnly = F) %>%
+    rhandsontable(profiles$bottle_scans, readOnly = T) %>%
       hot_context_menu(allowRowEdit = FALSE, allowColEdit = FALSE) %>%
-      hot_col("weight", readOnly = T)
+      hot_col("bottle_sal", readOnly = F) %>%
+      hot_col("bottle_O2", readOnly = F) %>%
+      hot_col("bottle_Chl", readOnly = F)
   })
+  # output$debug = renderDataTable({
+  #   data.frame(profiles$bottle_scans)
+  # })
 })
 
 
