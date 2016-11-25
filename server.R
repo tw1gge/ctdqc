@@ -294,21 +294,11 @@ shinyServer(function(input, output, session) {
   })
 
   output$bottles = renderRHandsontable({
-    # TODO make it work for all bottles
-    # scans = profiles$bottle_scans[[input$select_profile]]
-    # dt = data.table(data.frame(profiles$data[[input$select_profile]]@data))
-    # for(b in unique(scans$bottle)){
-    #   dt[scan > scans$start[b] & scan < scans$end[b], c("bottle", "dateTime") := list(scans$bottle[b], scans$dateTime[b])]
-    # }
-    # potential = c("depth", "salinity", "salinity2", "fluorescence", "oxygen_optode")
-    # SDcols = names(dt)[names(dt) %in% potential]
-    # dt[,lapply(.SD, mean), .SDcols = SDcols, by = list(bottle, dateTime)]
       # editable table
-    rhandsontable(profiles$bottle_scans, readOnly = T) %>%
-      hot_context_menu(allowRowEdit = FALSE, allowColEdit = FALSE) %>%
-      hot_col("bottle_sal", readOnly = F) %>%
-      hot_col("bottle_O2", readOnly = F) %>%
-      hot_col("bottle_Chl", readOnly = F)
+    rhandsontable(profiles$bottle_scans, readOnly = T, digits = 6, highlightRow = T) %>%
+      hot_col(c("bottle_sal", "bottle_O2", "bottle_Chl"), readOnly = F, type = "numeric") %>%
+      hot_col(c("salinity", "bottle_sal"), format = "0.0000") %>%
+      hot_context_menu(allowRowEdit = FALSE, allowColEdit = FALSE)
   })
   # output$debug = renderText({
   #   print(profiles$untrimmed[[input$select_profile]])
