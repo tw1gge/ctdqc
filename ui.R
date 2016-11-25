@@ -107,7 +107,6 @@ shinyUI(fluidPage(
         tabPanel("Bottles", rHandsontableOutput("bottles")),
         tabPanel("Summary", verbatimTextOutput("summary"))
       )
-      # , verbatimTextOutput("debug")
     )
   )
 ))
