@@ -132,36 +132,33 @@ shinyServer(function(input, output, session) {
   observeEvent(input$optode, {
     # for working data
     optode_temperature = optode.analogtemp(
-        profiles$data[[input$select_profile]]@data[[input$optode_T_channel]]
-        )
-    optode_Dphase = optode.analogDphase(
-        profiles$data[[input$select_profile]]@data[[input$optode_dphase_channel]]
-        )
-    salinity = profiles$data[[input$select_profile]]@data[["salinity"]]
-    depth = profiles$data[[input$select_profile]]@data[["depth"]]
-    optode_oxygen = optode.phaseCalc(optode_Dphase, optode_temperature, subset(optode_coefs, batch == input$optode_foil))
-    optode_oxygen = optode.correction(optode_oxygen, optode_temperature, salinity, depth)
-    profiles$data[[input$select_profile]] = ctdAddColumn(profiles$data[[input$select_profile]],
-                                                         optode_temperature, "temperature_optode", label = "temperature",
-                                                         unit = list(name=expression(degree*C), scale="Optode"))
-    profiles$data[[input$select_profile]] = ctdAddColumn(profiles$data[[input$select_profile]],
-                                                         optode_oxygen, "oxygen_optode",
-                                                         unit = list(name = expression(mmol~m-3), scale="Optode"))
-    processingLog(profiles$data[[input$select_profile]]) = paste("Optode processed with foil batch", input$optode_foil)
-    # repeat for untrimmed
-    optode_temperature = optode.analogtemp(
         profiles$untrimmed[[input$select_profile]]@data[[input$optode_T_channel]]
         )
     optode_Dphase = optode.analogDphase(
         profiles$untrimmed[[input$select_profile]]@data[[input$optode_dphase_channel]]
         )
-    salinity = profiles$untrimmed[[input$select_profile]]@data[[salinity]]
-    depth = profiles$untrimmed[[input$select_profile]]@data[[depth]]
+    salinity = profiles$untrimmed[[input$select_profile]]@data[["salinity"]]
+    depth = profiles$untrimmed[[input$select_profile]]@data[["depth"]]
     optode_oxygen = optode.phaseCalc(optode_Dphase, optode_temperature, subset(optode_coefs, batch == input$optode_foil))
     optode_oxygen = optode.correction(optode_oxygen, optode_temperature, salinity, depth)
+    # now add to untrimmed
+    profiles$untrimmed[[input$select_profile]] = ctdAddColumn(profiles$untrimmed[[input$select_profile]],
+                                                         optode_temperature, "temperature_optode", label = "temperature",
+                                                         unit = list(name=expression(degree*C), scale="Optode"))
     profiles$untrimmed[[input$select_profile]] = ctdAddColumn(profiles$untrimmed[[input$select_profile]],
                                                          optode_oxygen, "oxygen_optode",
                                                          unit = list(name = expression(mmol~m-3), scale="Optode"))
+    # now subset and apply to $data, don't write subset to log
+    x = subset(profiles$untrimmed[[input$select_profile]],
+               scan > min(profiles$data[[input$select_profile]][["scan"]] &
+               scan < max(profiles$data[[input$select_profile]][["scan"]])))
+    profiles$data[[input$select_profile]] = ctdAddColumn(profiles$data[[input$select_profile]],
+                                                         x[["temperature_optode"]], "temperature_optode", label = "temperature",
+                                                         unit = list(name=expression(degree*C), scale="Optode"))
+    profiles$data[[input$select_profile]] = ctdAddColumn(profiles$data[[input$select_profile]],
+                                                         x[["oxygen_optode"]], "oxygen_optode",
+                                                         unit = list(name = expression(mmol~m-3), scale="Optode"))
+    processingLog(profiles$data[[input$select_profile]]) = paste("Optode processed with foil batch", input$optode_foil)
   })
 
   observeEvent(input$rinko, {
@@ -313,8 +310,8 @@ shinyServer(function(input, output, session) {
       hot_col("bottle_O2", readOnly = F) %>%
       hot_col("bottle_Chl", readOnly = F)
   })
-  # output$debug = renderDataTable({
-  #   data.frame(profiles$bottle_scans)
+  # output$debug = renderText({
+  #   print(profiles$untrimmed[[input$select_profile]])
   # })
 })
 
