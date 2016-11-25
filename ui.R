@@ -68,7 +68,6 @@ shinyUI(fluidPage(
         tabPanel("TS Plot", plotOutput("TS_plot")),
         tabPanel("Table", dataTableOutput("datatable")),
         tabPanel("Map", leafletOutput("map")),
-        tabPanel("Bottles", rHandsontableOutput("bottles")),
         tabPanel("Sensors",
                  inputPanel(
                    h4("Optode"),
@@ -105,9 +104,10 @@ shinyUI(fluidPage(
                  ),
                  verbatimTextOutput("xml")
                  ),
+        tabPanel("Bottles", rHandsontableOutput("bottles")),
         tabPanel("Summary", verbatimTextOutput("summary"))
       )
-      #, verbatimTextOutput("debug")
+      # , verbatimTextOutput("debug")
     )
   )
 ))
