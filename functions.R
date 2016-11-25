@@ -44,6 +44,7 @@ optode.correction <- function(O2, t, S, depth = 0, optode_salinity = 0){
   # prs_factor = (((abs(depth))/1000)*pCoef) + 1
   return(O2c)
 }
+
 par_from_voltage <- function(x, factor, offset){
     return(factor * exp(offset * x))
 }

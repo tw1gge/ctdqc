@@ -130,14 +130,17 @@ shinyServer(function(input, output, session) {
   ## SENSORS
 
   observeEvent(input$optode, {
+    # for working data
     optode_temperature = optode.analogtemp(
         profiles$data[[input$select_profile]]@data[[input$optode_T_channel]]
         )
     optode_Dphase = optode.analogDphase(
         profiles$data[[input$select_profile]]@data[[input$optode_dphase_channel]]
         )
+    salinity = profiles$data[[input$select_profile]]@data[["salinity"]]
+    depth = profiles$data[[input$select_profile]]@data[["depth"]]
     optode_oxygen = optode.phaseCalc(optode_Dphase, optode_temperature, subset(optode_coefs, batch == input$optode_foil))
-    # TODO salinity correction
+    optode_oxygen = optode.correction(optode_oxygen, optode_temperature, salinity, depth)
     profiles$data[[input$select_profile]] = ctdAddColumn(profiles$data[[input$select_profile]],
                                                          optode_temperature, "temperature_optode", label = "temperature",
                                                          unit = list(name=expression(degree*C), scale="Optode"))
@@ -145,7 +148,20 @@ shinyServer(function(input, output, session) {
                                                          optode_oxygen, "oxygen_optode",
                                                          unit = list(name = expression(mmol~m-3), scale="Optode"))
     processingLog(profiles$data[[input$select_profile]]) = paste("Optode processed with foil batch", input$optode_foil)
-
+    # repeat for untrimmed
+    optode_temperature = optode.analogtemp(
+        profiles$untrimmed[[input$select_profile]]@data[[input$optode_T_channel]]
+        )
+    optode_Dphase = optode.analogDphase(
+        profiles$untrimmed[[input$select_profile]]@data[[input$optode_dphase_channel]]
+        )
+    salinity = profiles$untrimmed[[input$select_profile]]@data[[salinity]]
+    depth = profiles$untrimmed[[input$select_profile]]@data[[depth]]
+    optode_oxygen = optode.phaseCalc(optode_Dphase, optode_temperature, subset(optode_coefs, batch == input$optode_foil))
+    optode_oxygen = optode.correction(optode_oxygen, optode_temperature, salinity, depth)
+    profiles$untrimmed[[input$select_profile]] = ctdAddColumn(profiles$untrimmed[[input$select_profile]],
+                                                         optode_oxygen, "oxygen_optode",
+                                                         unit = list(name = expression(mmol~m-3), scale="Optode"))
   })
 
   observeEvent(input$rinko, {
