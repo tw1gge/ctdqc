@@ -124,7 +124,7 @@ shinyServer(function(input, output, session) {
   ## SENSORS
 
   observeEvent(input$optode, {
-    # for working data
+    # first calculate for all data (using untrimmed)
     optode_temperature = optode.analogtemp(
         profiles$untrimmed[[input$select_profile]]@data[[input$optode_T_channel]]
         )
@@ -135,7 +135,7 @@ shinyServer(function(input, output, session) {
     depth = profiles$untrimmed[[input$select_profile]]@data[["depth"]]
     optode_oxygen = optode.phaseCalc(optode_Dphase, optode_temperature, subset(optode_coefs, batch == input$optode_foil))
     optode_oxygen = optode.correction(optode_oxygen, optode_temperature, salinity, depth)
-    # now add to untrimmed
+    # add to untrimmed
     profiles$untrimmed[[input$select_profile]] = ctdAddColumn(profiles$untrimmed[[input$select_profile]],
                                                          optode_temperature, "temperature_optode", label = "temperature",
                                                          unit = list(name=expression(degree*C), scale="Optode"))
@@ -156,25 +156,34 @@ shinyServer(function(input, output, session) {
   })
 
   observeEvent(input$rinko, {
+    # first calculate for all data (using untrimmed)
     rinko_temperature = rinko_temp(
-        profiles$data[[input$select_profile]]@data[[input$rinko_T_channel]]
+        profiles$untrimmed[[input$select_profile]]@data[[input$rinko_T_channel]]
         )
     pressure =  unlist(profiles$data[[input$select_profile]]@data["pressure"])
     rinko_oxygen = rinko_o2(
-        profiles$data[[input$select_profile]]@data[[input$rinko_O_channel]],
+        profiles$untrimmed[[input$select_profile]]@data[[input$rinko_O_channel]],
         rinko_temperature,
         S = profiles$data[[input$select_profile]]@data[["salinity"]],
         oC = rinko_coefs,
         G = input$rinko_G,
         H = input$rinko_H
         )
+    # add to untrimmed
+    profiles$untrimmed[[input$select_profile]] = ctdAddColumn(profiles$untrimmed[[input$select_profile]],
+                                                         rinko_temperature, "temperature_RINKO", label = "temperature",
+                                                         unit = list(name=expression(degree*C), scale="RINKO"))
+    profiles$untrimmed[[input$select_profile]] = ctdAddColumn(profiles$untrimmed[[input$select_profile]],
+                                                         rinko_oxygen, "oxygen_RINKO", label = "oxygen",
+                                                         unit = list(name = expression(mmol~m-3), scale="RINKO"))
+    # now subset and apply to $data, don't write subset to log
+    x = subset(profiles$untrimmed[[input$select_profile]],
+               scan >= min(profiles$data[[input$select_profile]][["scan"]]) &
+               scan <= max(profiles$data[[input$select_profile]][["scan"]]))
     profiles$data[[input$select_profile]] = ctdAddColumn(profiles$data[[input$select_profile]],
                                                          rinko_temperature, "temperature_RINKO", label = "temperature",
                                                          unit = list(name=expression(degree*C), scale="RINKO"))
     profiles$data[[input$select_profile]] = ctdAddColumn(profiles$data[[input$select_profile]],
-                                                         rinko_oxygen, "oxygen_RINKO", label = "oxygen",
-                                                         unit = list(name = expression(mmol~m-3), scale="RINKO"))
-    profiles$untrimmed[[input$select_profile]] = ctdAddColumn(profiles$original[[input$select_profile]],
                                                          rinko_oxygen, "oxygen_RINKO", label = "oxygen",
                                                          unit = list(name = expression(mmol~m-3), scale="RINKO"))
     processingLog(profiles$data[[input$select_profile]]) = paste("RINKO processed with coefs", rinko_coefs[["serial"]],
@@ -330,7 +339,7 @@ shinyServer(function(input, output, session) {
     if(input$Plot_bottle_select == "Oxygen RINKO"){
       dat = hot_to_r(input$bottles)[bottle_O2 != 0]
       par(mfrow = c(1, 2))
-      plot(dat$bottle_O2, dat$oxygen_optode,
+      plot(dat$bottle_O2, dat$oxygen_RINKO,
            col = "green", xlab = "Winkler", ylab = "RINKO", main = "RINKO vs Winkler")
       m = lm(data = dat, oxygen_optode ~ bottle_O2)
       abline(m)
