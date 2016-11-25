@@ -198,7 +198,7 @@ shinyServer(function(input, output, session) {
 
     profiles$data[[input$select_profile]] = ctdAddColumn(profiles$data[[input$select_profile]],
                                                          licor_par, "par", label = "par",
-                                                         unit = list(name = expression(uE), scale = "PAR/Irradiance, Cefas Licor"))
+                                                         unit = list(name = expression(uE), scale = "PAR/Irradiance, Cefas Licor PAR"))
     processingLog(profiles$data[[input$select_profile]]) = paste("PAR processed with factor =", input$licor_factor, ",offset =", input$licor_offset)
   })
 
