@@ -1,10 +1,3 @@
-
-# This is the user-interface definition of a Shiny web application.
-# You can find out more about building applications with Shiny here:
-#
-# http://shiny.rstudio.com
-#
-
 library(shiny)
 library(shinyFiles)
 library(leaflet)
@@ -19,7 +12,7 @@ shinyUI(fluidPage(
 
   # Sidebar with a slider input for number of bins
   sidebarLayout(
-    sidebarPanel(
+    sidebarPanel(width = 3,
       textOutput('directory'),
       shinyDirButton('directory', 'Select Folder', 'Please select a folder'),
       actionButton('read_files', "Read .cnv files", icon=icon("book")),
@@ -39,7 +32,7 @@ shinyUI(fluidPage(
     ),
 
     # Show a plot of the generated distribution
-    mainPanel(
+    mainPanel(width = 9,
       tabsetPanel(
         tabPanel("Scan Plot",
                  plotOutput("scan_plot", brush = brushOpts("scan_brush", direction = "x")),
