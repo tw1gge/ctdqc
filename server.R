@@ -16,7 +16,7 @@ shinyServer(function(input, output, session) {
 
   # make dynamic file list for storing the CTD objects, a list of S4 objects
   profiles = reactiveValues(data = NULL)
-  profiles$bottle_scans = NA
+  profiles$bottles = NA
 
    ## read data
   observeEvent(input$read_files, {
@@ -74,7 +74,7 @@ shinyServer(function(input, output, session) {
       # calc_mean
     dat = dat[,lapply(.SD, mean), by = list(profile, fire_seq, niskin, dateTime), .SDcols = names]
     dat = cbind(dat, data.frame("bottle_sal" = 0, "bottle_O2" = 0, "bottle_Chl" = 0))
-    profiles$bottle_scans = dat
+    profiles$bottles = dat
   })
 
   observeEvent(input$read_rdata,{
@@ -84,7 +84,7 @@ shinyServer(function(input, output, session) {
     profiles$data = session$data
     profiles$original = session$original
     profiles$positions = session$positions
-    profiles$bottle_scans = session$bottle_scans
+    profiles$bottles = session$bottles
   })
 
   ## Processes
@@ -119,6 +119,11 @@ shinyServer(function(input, output, session) {
     processingLog(profiles$data[[input$select_profile]]) = paste(input$x1,
                                                                  ",adjusted with factor", input$factor,
                                                                  ", offset", input$offset)
+  })
+
+  observeEvent(input$Plot_bottle,{
+    par = input$Plot_bottle_select
+    plot(profiles$bottles)
   })
 
 
@@ -199,7 +204,7 @@ shinyServer(function(input, output, session) {
   observeEvent(input$write_rdata,{
     dir = parseDirPath(volumes, input$directory)
     session = profiles
-    session$bottle_scans = hot_to_r(input$bottles)
+    session$bottles = hot_to_r(input$bottles)
     save(session, file = paste0(dir, "/CTDQC.rdata"))
   })
 
@@ -291,7 +296,7 @@ shinyServer(function(input, output, session) {
 
   output$bottles = renderRHandsontable({
       # editable table
-    rhandsontable(profiles$bottle_scans, readOnly = T, digits = 6, highlightRow = T) %>%
+    rhandsontable(profiles$bottles, readOnly = T, digits = 6, highlightRow = T) %>%
       hot_col(c("bottle_sal", "bottle_O2", "bottle_Chl"), readOnly = F) %>%
       hot_col(c("salinity", "bottle_sal"), format = "0.0000") %>%
       hot_context_menu(allowRowEdit = FALSE, allowColEdit = FALSE)
