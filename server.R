@@ -23,6 +23,7 @@ shinyServer(function(input, output, session) {
 
   # make dynamic file list for storing the CTD objects, a list of S4 objects
   profiles = reactiveValues(data = NULL)
+  profiles$bottle_scans = NA
 
    ## read data
   observeEvent(input$read_files, {
@@ -216,6 +217,13 @@ shinyServer(function(input, output, session) {
       }
     })
   })
+  observeEvent(input$bottles,{
+    isolate(input$bottles)
+    # write back bottles
+    print(hot_to_r(input$bottles))
+    # profiles$bottles_scans = hot_to_r(input$bottles)
+    # print("bottles updated")
+    })
 
   ## Ui and controls
     # update select input when filelist changes
@@ -300,9 +308,6 @@ shinyServer(function(input, output, session) {
       hot_col(c("salinity", "bottle_sal"), format = "0.0000") %>%
       hot_context_menu(allowRowEdit = FALSE, allowColEdit = FALSE)
   })
-  # output$debug = renderText({
-  #   print(profiles$untrimmed[[input$select_profile]])
-  # })
 })
 
 
