@@ -121,12 +121,6 @@ shinyServer(function(input, output, session) {
                                                                  ", offset", input$offset)
   })
 
-  observeEvent(input$Plot_bottle,{
-    par = input$Plot_bottle_select
-    plot(profiles$bottles)
-  })
-
-
   ## SENSORS
 
   observeEvent(input$optode, {
@@ -298,9 +292,55 @@ shinyServer(function(input, output, session) {
       # editable table
     rhandsontable(profiles$bottles, readOnly = T, digits = 6, highlightRow = T) %>%
       hot_col(c("bottle_sal", "bottle_O2", "bottle_Chl"), readOnly = F) %>%
-      hot_col(c("salinity", "bottle_sal"), format = "0.0000") %>%
+      hot_col(c("salinity", "salinity2", "bottle_sal"), format = "0.0000") %>%
       hot_context_menu(allowRowEdit = FALSE, allowColEdit = FALSE)
   })
+  output$bottle_plot = renderPlot({
+    if(input$Plot_bottle_select == "Salinity"){
+      dat = hot_to_r(input$bottles)[bottle_sal != 0]
+      plot(dat$bottle_sal, dat$salinity2,
+           col = "green", xlab = "Niskin", ylab = "CT", main = "CT vs Niskin, Blue = Primary CT")
+      points(dat$bottle_sal, dat$salinity, col = "blue")
+      m = lm(data = dat, salinity ~ bottle_sal)
+      abline(m)
+    }
+  })
+  output$bottle_plot = renderPlot({
+    if(input$Plot_bottle_select == "Salinity"){
+      dat = hot_to_r(input$bottles)[bottle_sal != 0]
+      par(mfrow = c(1, 2))
+      plot(dat$bottle_sal, dat$salinity2,
+           col = "green", xlab = "Salinity bottle", ylab = "CT", main = "CT vs Niskin, Blue = Primary CT")
+      points(dat$bottle_sal, dat$salinity, col = "blue")
+      m = lm(data = dat, salinity ~ bottle_sal)
+      abline(m)
+      hist(m$residuals, main = "Residuals (Primary CT)")
+      profiles$bottle_coef[["salinity"]] = list("slope" = coef(m)[2], "intercept" = coef(m)[1])
+    }
+    if(input$Plot_bottle_select == "Oxygen Optode"){
+      dat = hot_to_r(input$bottles)[bottle_O2 != 0]
+      par(mfrow = c(1, 2))
+      plot(dat$bottle_O2, dat$oxygen_optode,
+           col = "green", xlab = "Winkler", ylab = "Optode", main = "Optode vs Winkler")
+      m = lm(data = dat, oxygen_optode ~ bottle_O2)
+      abline(m)
+      hist(m$residuals, main = "Residuals")
+      profiles$bottle_coef[["oxygen_optode"]] = list("slope" = coef(m)[2], "intercept" = coef(m)[1])
+    }
+    if(input$Plot_bottle_select == "Oxygen RINKO"){
+      dat = hot_to_r(input$bottles)[bottle_O2 != 0]
+      par(mfrow = c(1, 2))
+      plot(dat$bottle_O2, dat$oxygen_optode,
+           col = "green", xlab = "Winkler", ylab = "RINKO", main = "RINKO vs Winkler")
+      m = lm(data = dat, oxygen_optode ~ bottle_O2)
+      abline(m)
+      hist(m$residuals, main = "Residuals")
+      profiles$bottle_coef[["oxygen_RINKO"]] = list("slope" = coef(m)[2], "intercept" = coef(m)[1])
+    }
+  })
+  output$bottle_coef = renderTable({
+    as.data.frame(profiles$bottle_coef)
+    })
 })
 
 
