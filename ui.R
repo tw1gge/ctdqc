@@ -51,12 +51,16 @@ shinyUI(fluidPage(
                  h6("Flags and factors are applied to the primary axis only"),
                  h4("Flag"),
                  actionButton('apply_flag', "Apply Flag", icon=icon("flag")),
+                 inputPanel(
                  h4("Factor / Offset"),
-                 fluidRow(
-                   column(6, numericInput('factor', label = "Factor", value = 1)),
-                   column(6, numericInput('offset', label = "Offset", value = 0))
-                 ),
+                   fluidRow(
+                     column(6, numericInput('factor', label = "Factor", value = 1)),
+                     column(6, numericInput('offset', label = "Offset", value = 0))
+                   ),
                  actionButton('apply_factor', "Apply Factor + Offset", icon=icon("flag"))
+                 ),
+                 h4("CTD / Niskin regressions"),
+                 tableOutput("bottle_coef")
                  ),
         tabPanel("TS Plot", plotOutput("TS_plot")),
         tabPanel("Table", dataTableOutput("datatable")),
@@ -101,9 +105,8 @@ shinyUI(fluidPage(
                  rHandsontableOutput("bottles"),
                  fluidRow(
                    h4("CTD / Niskin regressions"),
-                   selectInput("Plot_bottle_select", NULL, choices = c("Salinity", "Oxygen Optode", "Oxygen RINKO", "Chlorophyll")),
-                   plotOutput("bottle_plot"),
-                   tableOutput("bottle_coef")
+                   selectInput("Plot_bottle_select", NULL, choices = c("Select parameter" = "", "Salinity", "Oxygen Optode", "Oxygen RINKO", "Chlorophyll")),
+                   plotOutput("bottle_plot")
                  )
                  ),
         tabPanel("Summary", verbatimTextOutput("summary"))

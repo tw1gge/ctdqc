@@ -317,39 +317,42 @@ shinyServer(function(input, output, session) {
   output$bottle_plot = renderPlot({
     if(input$Plot_bottle_select == "Salinity"){
       dat = hot_to_r(input$bottles)[bottle_sal != 0]
+      m = lm(data = dat, salinity ~ bottle_sal)
       par(mfrow = c(1, 2))
       plot(dat$bottle_sal, dat$salinity,
-           col = "blue", xlab = "Salinity bottle", ylab = "CT", main = "CT vs Niskin, Primary CT")
-      m = lm(data = dat, salinity ~ bottle_sal)
+           col = "blue", xlab = "Salinity bottle", ylab = "CT", main = "CT vs Niskin, Primary CT",
+           sub = paste0("y = ", round(coef(m)[1], 3), " + ", round(coef(m)[2], 3),"x"))
       abline(m)
       hist(m$residuals, main = "Residuals (Primary CT)")
-      profiles$bottle_coef[["salinity"]] = list("slope" = coef(m)[2], "intercept" = coef(m)[1])
+      profiles$bottle_coef[["salinity"]] = list(var = "salinity", slope = coef(m)[2], intercept = coef(m)[1])
     }
     if(input$Plot_bottle_select == "Oxygen Optode"){
       dat = hot_to_r(input$bottles)[bottle_O2 != 0]
+      m = lm(data = dat, oxygen_optode ~ bottle_O2)
       par(mfrow = c(1, 2))
       plot(dat$bottle_O2, dat$oxygen_optode,
-           col = "green", xlab = "Winkler", ylab = "Optode", main = "Optode vs Winkler")
-      m = lm(data = dat, oxygen_optode ~ bottle_O2)
+           col = "green", xlab = "Winkler", ylab = "Optode", main = "Optode vs Winkler",
+           sub = paste0("y = ", round(coef(m)[1], 3), " + ", round(coef(m)[2], 3),"x"))
       abline(m)
       hist(m$residuals, main = "Residuals")
-      profiles$bottle_coef[["oxygen_optode"]] = list("slope" = coef(m)[2], "intercept" = coef(m)[1])
+      profiles$bottle_coef[["oxygen_optode"]] = list(var = "oxygen_optode", slope = coef(m)[2], intercept = coef(m)[1])
     }
     if(input$Plot_bottle_select == "Oxygen RINKO"){
       dat = hot_to_r(input$bottles)[bottle_O2 != 0]
+      m = lm(data = dat, oxygen_RINKO ~ bottle_O2)
       par(mfrow = c(1, 2))
       plot(dat$bottle_O2, dat$oxygen_RINKO,
-           col = "green", xlab = "Winkler", ylab = "RINKO", main = "RINKO vs Winkler")
-      m = lm(data = dat, oxygen_RINKO ~ bottle_O2)
+           col = "green", xlab = "Winkler", ylab = "RINKO", main = "RINKO vs Winkler",
+           sub = paste0("y = ", round(coef(m)[1], 3), " + ", round(coef(m)[2], 3),"x"))
       abline(m)
       hist(m$residuals, main = "Residuals")
-      profiles$bottle_coef[["oxygen_RINKO"]] = list("slope" = coef(m)[2], "intercept" = coef(m)[1])
+      profiles$bottle_coef[["oxygen_RINKO"]] = list(var = "oxygen_RINKO", slope = coef(m)[2], intercept = coef(m)[1])
     }
   })
   output$bottle_coef = renderTable({
-    print(profiles$bottle_coef)
-    rbindlist(profiles$bottle_coef, idcol = "")
-    })
+    print(rbindlist(profiles$bottle_coef))
+    rbindlist(profiles$bottle_coef)
+  })
 })
 
 
