@@ -24,6 +24,26 @@ optode.phaseCalc <- function(DPhase, Temp, coefs){
       DPhase^4
     })
 }
+optode.correction <- function(O2, t, S, depth = 0, optode_salinity = 0){
+  # corrects optode measurements for salinity and depth
+    # oxygen units returned same as input
+  # Solubility and salinity comp based on Garcia and Gordon, 1992. Limno Ocean
+  pCoef = 0.032 # empricial derived pressure compensation coef from Uchida et al, 2008. J Atmos Ocean Tech
+  B0 = -6.24097E-03
+  B1 = -6.93498E-03
+  B2 = -6.90358E-03
+  B3 = -4.29155E-03
+  C0 = -3.11680E-07
+
+  Ts = log((298.15-t)/(273.15+t)) # scaled temperature
+
+  O2c = O2 * exp(S * (B0 + B1 * Ts + B2 * Ts^2 + B3 * Ts^3) + C0 * S^2) /
+      exp(optode_salinity* (B0 + B1 * Ts + B2 * Ts^2 + B3 * Ts^3) + C0^2 * optode_salinity^2) *
+      (1 + (pCoef * abs(depth)) / 1000)
+  # sal_factor = exp((S - optode_salinity_setting) * (B0 + B1*Ts + B2*Ts^2 + B3*Ts^3) + C0 * (S^2 - optode_salinity_setting^2))
+  # prs_factor = (((abs(depth))/1000)*pCoef) + 1
+  return(O2c)
+}
 par_from_voltage <- function(x, factor, offset){
     return(factor * exp(offset * x))
 }
