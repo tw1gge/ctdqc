@@ -97,7 +97,17 @@ shinyUI(fluidPage(
                  ),
                  verbatimTextOutput("xml")
                  ),
-        tabPanel("Bottles", rHandsontableOutput("bottles")),
+        tabPanel("Bottles",
+                 rHandsontableOutput("bottles"),
+                 fluidRow(
+                   h4("CTD / Niskin regressions"),
+                   column(4,
+                     selectInput("Plot_bottle_select", NULL, choices = c("Salinity", "Oxygen", "Chlorophyll")),
+                     actionButton("Plot_bottle", "Plot regression", icon=icon("code"))
+                          ),
+                   column(8, plotOutput("bottle_plot"))
+                 )
+                 ),
         tabPanel("Summary", verbatimTextOutput("summary"))
       )
     )
