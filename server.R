@@ -160,11 +160,11 @@ shinyServer(function(input, output, session) {
     rinko_temperature = rinko_temp(
         profiles$untrimmed[[input$select_profile]]@data[[input$rinko_T_channel]]
         )
-    pressure =  unlist(profiles$data[[input$select_profile]]@data["pressure"])
+    pressure =  unlist(profiles$untrimmed[[input$select_profile]]@data["pressure"])
     rinko_oxygen = rinko_o2(
         profiles$untrimmed[[input$select_profile]]@data[[input$rinko_O_channel]],
         rinko_temperature,
-        S = profiles$data[[input$select_profile]]@data[["salinity"]],
+        S = profiles$untrimmed[[input$select_profile]]@data[["salinity"]],
         oC = rinko_coefs,
         G = input$rinko_G,
         H = input$rinko_H
@@ -181,10 +181,10 @@ shinyServer(function(input, output, session) {
                scan >= min(profiles$data[[input$select_profile]][["scan"]]) &
                scan <= max(profiles$data[[input$select_profile]][["scan"]]))
     profiles$data[[input$select_profile]] = ctdAddColumn(profiles$data[[input$select_profile]],
-                                                         rinko_temperature, "temperature_RINKO", label = "temperature",
+                                                         x[["temperature_RINKO"]], "temperature_RINKO", label = "temperature",
                                                          unit = list(name=expression(degree*C), scale="RINKO"))
     profiles$data[[input$select_profile]] = ctdAddColumn(profiles$data[[input$select_profile]],
-                                                         rinko_oxygen, "oxygen_RINKO", label = "oxygen",
+                                                         x[["oxygen_RINKO"]], "oxygen_RINKO", label = "oxygen",
                                                          unit = list(name = expression(mmol~m-3), scale="RINKO"))
     processingLog(profiles$data[[input$select_profile]]) = paste("RINKO processed with coefs", rinko_coefs[["serial"]],
                                                                  ",G =", input$rinko_G,
@@ -318,9 +318,8 @@ shinyServer(function(input, output, session) {
     if(input$Plot_bottle_select == "Salinity"){
       dat = hot_to_r(input$bottles)[bottle_sal != 0]
       par(mfrow = c(1, 2))
-      plot(dat$bottle_sal, dat$salinity2,
-           col = "green", xlab = "Salinity bottle", ylab = "CT", main = "CT vs Niskin, Blue = Primary CT")
-      points(dat$bottle_sal, dat$salinity, col = "blue")
+      plot(dat$bottle_sal, dat$salinity,
+           col = "blue", xlab = "Salinity bottle", ylab = "CT", main = "CT vs Niskin, Primary CT")
       m = lm(data = dat, salinity ~ bottle_sal)
       abline(m)
       hist(m$residuals, main = "Residuals (Primary CT)")
@@ -341,14 +340,15 @@ shinyServer(function(input, output, session) {
       par(mfrow = c(1, 2))
       plot(dat$bottle_O2, dat$oxygen_RINKO,
            col = "green", xlab = "Winkler", ylab = "RINKO", main = "RINKO vs Winkler")
-      m = lm(data = dat, oxygen_optode ~ bottle_O2)
+      m = lm(data = dat, oxygen_RINKO ~ bottle_O2)
       abline(m)
       hist(m$residuals, main = "Residuals")
       profiles$bottle_coef[["oxygen_RINKO"]] = list("slope" = coef(m)[2], "intercept" = coef(m)[1])
     }
   })
   output$bottle_coef = renderTable({
-    as.data.frame(profiles$bottle_coef)
+    print(profiles$bottle_coef)
+    rbindlist(profiles$bottle_coef, idcol = "")
     })
 })
 
