@@ -15,8 +15,7 @@ shinyServer(function(input, output, session) {
   output$directory = renderText({paste0(parseDirPath(volumes, input$directory), "/")})
 
   # make dynamic file list for storing the CTD objects, a list of S4 objects
-  profiles = reactiveValues(data = NULL)
-  profiles$bottles = NA
+  profiles = reactiveValues(data = NULL, bottles = NA)
 
    ## read data
   observeEvent(input$read_files, {
@@ -207,7 +206,9 @@ shinyServer(function(input, output, session) {
   observeEvent(input$write_rdata,{
     dir = parseDirPath(volumes, input$directory)
     session = profiles
-    session$bottles = hot_to_r(input$bottles)
+    if(!is.na(profiles$bottles)){
+      session$bottles = hot_to_r(input$bottles)
+    }
     save(session, file = paste0(dir, "/CTDQC.rdata"))
   })
 
