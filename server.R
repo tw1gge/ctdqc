@@ -37,7 +37,6 @@ shinyServer(function(input, output, session) {
     profiles$original = d
       # make a summary of the positions for the map
     profiles$positions = rbindlist(lapply( profiles$data , function(x) `@`( x , metadata)[c("filename", "startTime", "station", "longitude", "latitude")]))
-    save(profiles$data, file = "profiles.rdata")
   })
 
   observeEvent(input$read_bottle, {
@@ -119,6 +118,10 @@ shinyServer(function(input, output, session) {
     processingLog(profiles$data[[input$select_profile]]) = paste(input$x1,
                                                                  ",adjusted with factor", input$factor,
                                                                  ", offset", input$offset)
+  })
+
+  observeEvent(input$mark_complete,{
+    processingLog(profiles$data[[input$select_profile]]) = paste("QC Complete")
   })
 
   ## SENSORS
@@ -356,8 +359,13 @@ shinyServer(function(input, output, session) {
     rbindlist(profiles$bottle_coef)
   })
   output$progress = renderTable({
-    # check reactive values and calculate progress
-  women
+    # fetch processing log then grep for string to check progress
+    log = lapply(profiles$data , function(x) `@`( x , processingLog))
+    done = grepl("complete", log, ignore.case=T)
+    data.frame(
+      "dip" = names(profiles$data),
+      "done" = done
+      )
   })
 })
 
