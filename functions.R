@@ -129,6 +129,10 @@ getVolumesFast <- function (exclude){
   volumes
 }
 
+extract.metadata <- function(oce, vars){
+    rbindlist(lapply(oce , function(x) `@`( x , metadata)[vars]))
+}
+
 write.ctd.netcdf <- function(d, metadata){
   require(ncdf4)
   print(Sys.info())
