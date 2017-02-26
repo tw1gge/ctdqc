@@ -10,7 +10,7 @@ source("functions.R", local = T)
 shinyServer(function(input, output, session) {
 
   # find OS disk drives
-  volumes = getVolumes()
+  volumes = getVolumesFast()
   shinyDirChoose(input, 'directory', roots=volumes, session=session, restrictions=system.file(package='base'))
   output$directory = renderText({paste0(parseDirPath(volumes, input$directory), "/")})
 

@@ -104,3 +104,28 @@ rinko_o2 <- function(V, t, S, oC = list(A = -4.234162e+01,
   return(DO)
 }
 
+getVolumesFast <- function (exclude){
+  osSystem <- Sys.info()["sysname"]
+  if (osSystem == "Darwin") {
+    volumes <- list.files("/Volumes/", full.names = T)
+    names(volumes) <- basename(volumes)
+  }
+  else if (osSystem == "Linux") {
+    volumes <- c(Computer = "/")
+    media <- list.files("/media/", full.names = T)
+    names(media) <- basename(media)
+    volumes <- c(volumes, media)
+  }
+  else if (osSystem == "Windows") {
+    volumes <- system("wmic logicaldisk get Caption", intern = T)
+    volumes <- sub(" *\\r$", "", volumes)
+    keep <- !tolower(volumes) %in% c("caption", "")
+    volumes <- volumes[keep]
+    names(volumes) <- volumes
+  }
+  else {
+    stop("unsupported OS")
+  }
+  volumes
+}
+
