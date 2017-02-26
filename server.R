@@ -36,7 +36,8 @@ shinyServer(function(input, output, session) {
       # make a backup for use by revert
     profiles$original = d
       # make a summary of the positions for the map
-    profiles$positions = rbindlist(lapply( profiles$data , function(x) `@`( x , metadata)[c("filename", "startTime", "station", "longitude", "latitude")]))
+    profiles$positions = extract.metadata(profiles$data, c("filename", "startTime", "station", "longitude", "latitude", "cruise"))
+    if(length(unique(profiles$positions$cruise)) > 1){warning("Cruise ID differ between cnv files!")}
   })
 
   observeEvent(input$read_bottle, {
@@ -248,6 +249,9 @@ shinyServer(function(input, output, session) {
   observe({
     updateSelectInput(session, "optode_foil", choices = unique(optode_coefs$batch), selected = "1707")
     })
+  observe({
+    updateTextInput(session, "metadata_cruise", value=unique(profiles$positions$cruise))
+  })
 
   ## Output
 

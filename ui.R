@@ -115,7 +115,8 @@ shinyUI(fluidPage(
         tabPanel("Summary", verbatimTextOutput("summary")),
         tabPanel("NetCDF",
                  inputPanel(
-                   h4("Metadata")
+                   h4("Global Metadata"),
+                   textInput("metadata_cruise", NULL, value="CEND_XX_XX")
                  ))
       )
     )
