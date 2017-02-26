@@ -6,6 +6,7 @@ library(leaflet)
 library(rhandsontable)
 
 source("functions.R", local = T)
+CTDQC_version = 1.0
 
 shinyServer(function(input, output, session) {
 
@@ -36,7 +37,7 @@ shinyServer(function(input, output, session) {
     profiles$original = d
       # make a summary of the positions for the map
     profiles$positions = rbindlist(lapply( profiles$data , function(x) `@`( x , metadata)[c("filename", "startTime", "station", "longitude", "latitude")]))
-
+    save(profiles$data, file = "profiles.rdata")
   })
 
   observeEvent(input$read_bottle, {
@@ -353,6 +354,10 @@ shinyServer(function(input, output, session) {
   output$bottle_coef = renderTable({
     print(rbindlist(profiles$bottle_coef))
     rbindlist(profiles$bottle_coef)
+  })
+  output$progress = renderTable({
+    # check reactive values and calculate progress
+  women
   })
 })
 

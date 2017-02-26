@@ -129,3 +129,9 @@ getVolumesFast <- function (exclude){
   volumes
 }
 
+write.ctd.netcdf <- function(d, metadata){
+  require(ncdf4)
+  print(Sys.info())
+
+}
+

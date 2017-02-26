@@ -25,6 +25,10 @@ shinyUI(fluidPage(
       numericInput('bin_size', "Bin Size (m)", min = 0.5, max = 5, value = 0.5, step = 0.5, width = "50%"),
       actionButton('decimate', "Decimate", icon=icon("delicious")),
 
+      h4("Progress"),
+      actionButton('mark_complete', "Mark QC complete", icon=icon("check-square")),
+      tableOutput("progress"),
+
       h4("Save"),
       actionButton('write_rdata', "Write Rdata", icon=icon("bookmark")),
       actionButton('write_csv', "Write csv's", icon=icon("table"))
@@ -109,7 +113,11 @@ shinyUI(fluidPage(
                    plotOutput("bottle_plot")
                  )
                  ),
-        tabPanel("Summary", verbatimTextOutput("summary"))
+        tabPanel("Summary", verbatimTextOutput("summary")),
+        tabPanel("NetCDF",
+                 inputPanel(
+                   h4("Metadata")
+                 ))
       )
     )
   )
