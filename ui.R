@@ -38,7 +38,7 @@ shinyUI(fluidPage(
     mainPanel(width = 9,
       tabsetPanel(
         tabPanel("Scan Plot",
-                 plotOutput("scan_plot", brush = brushOpts("scan_brush", direction = "x")),
+                 plotOutput("scan_plot", brush = brushOpts("scan_brush", direction = "x"), height="800px"),
                  h4("Trim"),
                  actionButton('pumped', "Subset pump", icon=icon("battery-1")),
                  actionButton('trim', "Trim", icon=icon("scissors")),
@@ -50,7 +50,7 @@ shinyUI(fluidPage(
                    column(4, selectInput("x1", "Primary (Blue) X axis", choices = NULL)),
                    column(4, selectInput("x2", "Secondary (Red) X axis", choices = NULL))
                  ),
-                 plotOutput("profile_plot"),
+                 plotOutput("profile_plot", height="800px"),
                  h6("Flags and factors are applied to the primary axis only"),
                  h4("Flag"),
                  actionButton('apply_flag', "Apply Flag", icon=icon("flag")),
@@ -112,12 +112,7 @@ shinyUI(fluidPage(
                    plotOutput("bottle_plot")
                  )
                  ),
-        tabPanel("Summary", verbatimTextOutput("summary")),
-        tabPanel("NetCDF",
-                 inputPanel(
-                   h4("Global Metadata"),
-                   textInput("metadata_cruise", NULL, value="CEND_XX_XX")
-                 ))
+        tabPanel("Summary", verbatimTextOutput("summary"))
       )
     )
   )
