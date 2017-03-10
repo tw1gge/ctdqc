@@ -210,7 +210,11 @@ shinyServer(function(input, output, session) {
 
   observeEvent(input$write_rdata,{
     dir = parseDirPath(volumes, input$directory)
-    session = profiles
+    session = list()
+    session$data = profiles$data
+    session$untrimmed = profiles$untrimmed
+    session$original = profiles$original
+    session$positions = profiles$positions
     if(!is.na(profiles$bottles)){
       session$bottles = hot_to_r(input$bottles)
     }
@@ -249,9 +253,6 @@ shinyServer(function(input, output, session) {
   observe({
     updateSelectInput(session, "optode_foil", choices = unique(optode_coefs$batch), selected = "1707")
     })
-  observe({
-    updateTextInput(session, "metadata_cruise", value=unique(profiles$positions$cruise))
-  })
 
   ## Output
 
