@@ -30,6 +30,13 @@ shinyServer(function(input, output, session) {
         d[[i]] = read.ctd.sbe(paste0(dir,"/",i))
       }
     })
+      # check if filter has been applied
+    headers = extract.metadata(export_data, "header")
+    filtered = stringr::str_count(headers, "filter_low_pass_A_vars = prDM")
+    if(filtered < length(d)){
+      warning("WARNING - pressure filter has not been applied for all profiles!")
+    }
+
       # insert data into data slot
     profiles$data = d
     profiles$untrimmed = d
@@ -276,8 +283,13 @@ shinyServer(function(input, output, session) {
       }
     )
   output$scan_plot = renderPlot({
-    # workaround for plot function not liking null data
-    if(!is.null(profiles$data[[input$select_profile]]))
+      # check if there is data, give warning if not
+    validate(need(!is.null(profiles$data[[input$select_profile]]), "Data not loaded"))
+    validate(
+      need(any(grepl("filter_low_pass_A_vars = prDM",
+                     profiles$data[[input$select_profile]]@metadata$header)),
+           "Pressure filter has not been applied for this profile")
+      )
     plotScan(profiles$data[[input$select_profile]])
     abline(v = input$trim_scans)
     })
