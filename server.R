@@ -6,7 +6,7 @@ library(leaflet)
 library(rhandsontable)
 
 source("functions.R", local = T)
-CTDQC_version = 1.0
+CTDQC_version = 1.1
 
 shinyServer(function(input, output, session) {
 
@@ -109,7 +109,15 @@ shinyServer(function(input, output, session) {
   })
 
   observeEvent(input$apply_flag,{
-    warning("not implemented")
+      # find the range of y to flag x on, based on plot brush
+    y_select = round(c(input$flag_brush$ymin, input$flag_brush$ymax), 3)
+      # extract the y variable
+    y = profiles$data[[input$select_profile]]@data[[input$y]]
+      # replace with NA sections of x which match the selected y
+    profiles$data[[input$select_profile]]@data[[input$x1]][y %between% y_select] = NA
+      # write details to ctd log
+    log = paste("flag applied to", input$x1, "for", input$y, "between", y_select[1], "and", y_select[2])
+    processingLog(profiles$data[[input$select_profile]]) = log
   })
 
   observeEvent(input$apply_factor,{
