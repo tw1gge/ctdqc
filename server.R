@@ -276,10 +276,10 @@ shinyServer(function(input, output, session) {
     if(!is.null(profiles$data[[input$select_profile]]))
     summary(profiles$data[[input$select_profile]])
     )
-  output$xml <- renderPrint(
+  output$xml <- renderText(
     # workaround for oce function not liking null data
       if(!is.null(profiles$data[[input$select_profile]])){
-        profiles$data[[input$select_profile]]@metadata["header"]
+        paste(profiles$data[[input$select_profile]]@metadata$header, collapse="\n")
       }
     )
   output$scan_plot = renderPlot({

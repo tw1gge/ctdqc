@@ -37,6 +37,10 @@ shinyUI(fluidPage(
     # Show a plot of the generated distribution
     mainPanel(width = 9,
       tabsetPanel(
+        tabPanel("Summary",
+                 verbatimTextOutput("summary"),
+                 verbatimTextOutput("xml")
+                 ),
         tabPanel("Scan Plot",
                  plotOutput("scan_plot", brush = brushOpts("scan_brush", direction = "x"), height="800px"),
                  h4("Trim"),
@@ -101,8 +105,7 @@ shinyUI(fluidPage(
                  ),
                  inputPanel(
                    h4("Flurometer")
-                 ),
-                 verbatimTextOutput("xml")
+                 )
                  ),
         tabPanel("Bottles",
                  rHandsontableOutput("bottles"),
@@ -112,7 +115,7 @@ shinyUI(fluidPage(
                    plotOutput("bottle_plot")
                  )
                  ),
-        tabPanel("Summary", verbatimTextOutput("summary"))
+        tabPanel("Metadata")
       )
     )
   )
