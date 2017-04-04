@@ -7,6 +7,7 @@ library(rhandsontable)
 
 source("functions.R", local = T)
 CTDQC_version = 1.1
+editable_metadata = c("id", "title", "summary", "processing_level", "comment", "acknowledgment", "licence", "project", "creator", "creator_email")
 
 shinyServer(function(input, output, session) {
 
@@ -31,7 +32,7 @@ shinyServer(function(input, output, session) {
       }
     })
       # check if filter has been applied
-    headers = extract.metadata(export_data, "header")
+    headers = extract.metadata(d, "header")
     filtered = stringr::str_count(headers, "filter_low_pass_A_vars = prDM")
     if(filtered < length(d)){
       warning("WARNING - pressure filter has not been applied for all profiles!")
@@ -44,7 +45,13 @@ shinyServer(function(input, output, session) {
     profiles$original = d
       # make a summary of the positions for the map
     profiles$positions = extract.metadata(profiles$data, c("filename", "startTime", "station", "longitude", "latitude", "cruise"))
+    profiles$global_metadata = netcdf.metadata(profiles$data, profiles$positions)
     if(length(unique(profiles$positions$cruise)) > 1){warning("Cruise ID differ between cnv files!")}
+  })
+
+  observeEvent(input$make_netcdf, {
+    #
+    print("make thing")
   })
 
   observeEvent(input$read_bottle, {
@@ -230,6 +237,7 @@ shinyServer(function(input, output, session) {
     session$untrimmed = profiles$untrimmed
     session$original = profiles$original
     session$positions = profiles$positions
+    session$global_metadata = profiles$global_metadata
     if(!is.na(profiles$bottles)){
       session$bottles = hot_to_r(input$bottles)
     }
@@ -379,10 +387,12 @@ shinyServer(function(input, output, session) {
       profiles$bottle_coef[["oxygen_RINKO"]] = list(var = "oxygen_RINKO", slope = coef(m)[2], intercept = coef(m)[1])
     }
   })
+
   output$bottle_coef = renderTable({
     print(rbindlist(profiles$bottle_coef))
     rbindlist(profiles$bottle_coef)
   })
+
   output$progress = renderTable({
     # fetch processing log then grep for string to check progress
     log = lapply(profiles$data , function(x) `@`( x , processingLog))
@@ -392,6 +402,19 @@ shinyServer(function(input, output, session) {
       "done" = done
       )
   })
+
+  output$edit_metadata = renderUI({
+      lapply(editable_metadata, function(i){
+        # generate UI dynamically
+        id = paste0("netcdf-", i)
+        textInput(id, i, value=profiles$global_metadata[[i]])
+      })
+    })
+
+  output$metadata = renderText({
+    paste(names(profiles$global_metadata), " ; ", profiles$global_metadata, collapse="\n")
+  })
+
 })
 
 

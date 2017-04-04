@@ -31,6 +31,7 @@ shinyUI(fluidPage(
 
       h4("Progress"),
       actionButton('mark_complete', "Mark QC complete", icon=icon("check-square")),
+      actionButton('make_netcdf', "Publish NetCDF", icon=icon("object-group")),
       tableOutput("progress")
     ),
 
@@ -115,7 +116,11 @@ shinyUI(fluidPage(
                    plotOutput("bottle_plot")
                  )
                  ),
-        tabPanel("Metadata")
+        tabPanel("Metadata",
+                 # dynamically generated UI
+                 uiOutput("edit_metadata"),
+                 verbatimTextOutput("metadata")
+                 )
       )
     )
   )

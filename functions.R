@@ -130,12 +130,51 @@ getVolumesFast <- function (exclude){
 }
 
 extract.metadata <- function(oce, vars){
+  # function for fetching metadata variables from oce object
     rbindlist(lapply(oce , function(x) `@`( x , metadata)[vars]))
 }
 
-write.ctd.netcdf <- function(d, metadata){
-  require(ncdf4)
-  print(Sys.info())
+netcdf.metadata <- function(d, positions){
+  # generates metadata from file
+  metadata = list()
+  metadata[["ncei_template_version"]] = "NCEI_NetCDF_TimeSeriesProfile_Orthogonal_Template_v2.0"
+  metadata[["featureType"]] = "timeSeriesProfile"
+  metadata[["title"]] = paste("CTD profiles from", paste(unique(positions$cruise), collapse=", "))
+  metadata[["summary"]] = ""
+  metadata[["keywords"]] = ""
+  metadata[["keywords_vocabluary"]] = "GCMD:GCMD Keywords"
+  metadata[["Conventions"]] = "CF-1.6, ACDD-1.3"
+  metadata[["id"]] = paste0("SBE_CTD_", paste(unique(positions$cruise), collapse="&"))
+  metadata[["naming_authority"]] = "uk.co.cefas"
+  metadata[["history"]] = ""
+  metadata[["source"]] = "CTD rossette system"
+  metadata[["processing_level"]] = "QC and processing done following Cefas SBE CTD QC SOP v1.1"
+  metadata[["comment"]] = ""
+  metadata[["acknowledgement"]] = ""
+  metadata[["licence"]] = "OGLv3.0 https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+  metadata[["standard_name_volcabulary"]] = "CF Standard Name Table v39"
+  metadata[["date_created"]] = strftime(lubridate::now(tzone="UTC"), "%Y-%M-%dT%H:%M:%SZ")
+  metadata[["creator_name"]] = "Tom Hull"
+  metadata[["creator_email"]] = "tom.hull@cefas.co.uk"
+  metadata[["creator_url"]] = "http://www.cefas.co.uk"
+  metadata[["institution"]] = "Centre for Environment Fisheries and Aquaculture Science"
+  metadata[["project"]] = ""
+  metadata[["geospatial_lat_min"]] = min(positions$latitude)
+  metadata[["geospatial_lat_max"]] = max(positions$latitude)
+  metadata[["geospatial_lon_min"]] = min(positions$longitude)
+  metadata[["geospatial_lon_max"]] = max(positions$longitude)
+  metadata[["geospatial_lat_units"]]= "degrees_north"
+  metadata[["geospatial_lon_units"]] = "degrees_east"
+  metadata[["time_coverage_start"]] = strftime(min(positions$startTime), "%Y-%M-%dT%H:%M:%SZ")
+  metadata[["time_coverage_end"]] = strftime(max(positions$startTime), "%Y-%M-%dT%H:%M:%SZ")
+  metadata[["cdm_data_type"]] = "Station"
+  metadata[["uuid"]] = uuid::UUIDgenerate(use.time=T)
+  metadata[["references"]] = "doi::"
+  return(metadata)
+}
 
+write.ctd.netcdf <- function(d, global_metadata){
+  require(RNetCDF)
+  print(Sys.info())
 }
 
