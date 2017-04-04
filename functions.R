@@ -173,7 +173,11 @@ netcdf.metadata <- function(d, positions){
 
 check.qc.done <- function(session){
   # validates that all QC steps are done
-  return(FALSE)
+  log = rbindlist(lapply(session$data , function(x) `@`( x , processingLog)), idcol=T)
+  number_dips = length(session$data)
+  log = as.data.frame(table(log$value))
+  grep("QC Complete", log)
+  return(T)
 }
 
 write.ctd.netcdf <- function(session){
