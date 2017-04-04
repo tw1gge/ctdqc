@@ -19,13 +19,6 @@ shinyServer(function(input, output, session) {
   # make dynamic file list for storing the CTD objects, a list of S4 objects
   profiles = reactiveValues(data = NULL, bottles = NA)
 
-  observe({
-    for(m in grep("netcdf-", names(input), value=T)){
-      # profiles$global_metadata[[m]] = isolate(input[[m]])
-      profiles$global_metadata[[m]] = input[[m]]
-    }
-  })
-
    ## read data
   observeEvent(input$read_files, {
     filelist = list.files(parseDirPath(volumes, input$directory), full.names = F, pattern = "*.cnv")
@@ -53,6 +46,7 @@ shinyServer(function(input, output, session) {
       # make a summary of the positions for the map
     profiles$positions = extract.metadata(profiles$data, c("filename", "startTime", "station", "longitude", "latitude", "cruise"))
     profiles$global_metadata = netcdf.metadata(profiles$data, profiles$positions)
+    profiles$global_metadata_default = profiles$global_metadata
     if(length(unique(profiles$positions$cruise)) > 1){warning("Cruise ID differ between cnv files!")}
   })
 
@@ -411,16 +405,22 @@ shinyServer(function(input, output, session) {
   })
 
   output$edit_metadata = renderUI({
-    validate(need(profiles$global_metadata, "data not loaded"))
+    validate(need(profiles$global_metadata_default, "data not loaded"))
+
     lapply(editable_metadata, function(i){
       # generate UI dynamically
       id = paste0("netcdf-", i)
-      textInput(id, i, value=profiles$global_metadata[[i]])
+      default_value = profiles$global_metadata_default[[i]] # use copy to avoid instant-writeback
+      textInput(id, i, value=default_value)
     })
   })
 
   output$metadata = renderText({
     validate(need(profiles$global_metadata, ""))
+    for(i in editable_metadata){
+      id = paste0("netcdf-", i)
+      profiles$global_metadata[[i]] = input[[id]]
+    }
     paste(names(profiles$global_metadata), "; ", profiles$global_metadata, collapse="\n")
   })
 

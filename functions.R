@@ -137,14 +137,14 @@ extract.metadata <- function(oce, vars){
 netcdf.metadata <- function(d, positions){
   # generates metadata from file
   metadata = list()
+  metadata[["id"]] = paste0("SBE_CTD_", paste(unique(positions$cruise), collapse="&"))
+  metadata[["title"]] = paste("CTD profiles from", paste(unique(positions$cruise), collapse=", "))
   metadata[["ncei_template_version"]] = "NCEI_NetCDF_TimeSeriesProfile_Orthogonal_Template_v2.0"
   metadata[["featureType"]] = "timeSeriesProfile"
-  metadata[["title"]] = paste("CTD profiles from", paste(unique(positions$cruise), collapse=", "))
   metadata[["summary"]] = ""
   metadata[["keywords"]] = ""
   metadata[["keywords_vocabluary"]] = "GCMD:GCMD Keywords"
   metadata[["Conventions"]] = "CF-1.6, ACDD-1.3"
-  metadata[["id"]] = paste0("SBE_CTD_", paste(unique(positions$cruise), collapse="&"))
   metadata[["naming_authority"]] = "uk.co.cefas"
   metadata[["history"]] = ""
   metadata[["source"]] = "CTD rossette system"
