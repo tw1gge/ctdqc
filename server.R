@@ -100,6 +100,7 @@ shinyServer(function(input, output, session) {
     profiles$original = session$original
     profiles$positions = session$positions
     profiles$bottles = session$bottles
+    profiles$global_metadata = session$global_metadata
   })
 
   ## Processes
@@ -239,7 +240,10 @@ shinyServer(function(input, output, session) {
     session$original = profiles$original
     session$positions = profiles$positions
     session$global_metadata = profiles$global_metadata
-    if(!any(is.na(profiles$bottles))){
+    if(!is.null(profiles$bottles)){
+      session$bottles = profiles$bottles
+    }
+    if(!is.null(input$bottles)){
       session$bottles = hot_to_r(input$bottles)
     }
     save(session, file = paste0(dir, "/CTDQC.rdata"))
@@ -338,6 +342,7 @@ shinyServer(function(input, output, session) {
 
   output$bottles = renderRHandsontable({
       # editable table
+    validate(need(profiles$bottles, "bottle file not loaded"))
     rhandsontable(profiles$bottles, readOnly = T, digits = 6, highlightRow = T) %>%
       hot_col(c("bottle_sal", "bottle_O2", "bottle_Chl"), readOnly = F) %>%
       hot_col(c("salinity", "salinity2", "bottle_sal"), format = "0.0000") %>%
