@@ -105,6 +105,7 @@ rinko_o2 <- function(V, t, S, oC = list(A = -4.234162e+01,
 }
 
 getVolumesFast <- function (exclude){
+  # faster than default version in shinyFiles
   osSystem <- Sys.info()["sysname"]
   if (osSystem == "Darwin") {
     volumes <- list.files("/Volumes/", full.names = T)
@@ -170,7 +171,111 @@ netcdf.metadata <- function(d, positions){
   return(metadata)
 }
 
-write.ctd.netcdf <- function(d, global_metadata){
+check.qc.done <- function(session){
+  # validates that all QC steps are done
+  return(FALSE)
+}
+
+write.ctd.netcdf <- function(session){
   require(RNetCDF)
+  require(uuid)
+  require(reshape2)
+
+  # reshape and process data
+  pressures = rbindlist(lapply(session$data , function(x) `@`( x , data)["pressure"]), idcol=T)
+  pressures[, max := max(pressure), by=.id]
+  deepest_dip = pressures[max(max) == max]
+
+  v_lat = rbindlist(lapply(session$data , function(x) `@`( x , metadata)["latitude"]), idcol=T)
+  v_lon = rbindlist(lapply(session$data , function(x) `@`( x , metadata)["longitude"]), idcol=T)
+  v_time = rbindlist(lapply(session$data , function(x) `@`( x , metadata)["startTime"]), idcol=T)
+  v_station = rbindlist(lapply(session$data , function(x) `@`( x , metadata)["station"]), idcol=T)
+
+  sb = rbindlist(lapply(session$data , function(x) `@`( x , data)), idcol=T, use.names=T, fill=T)
+  sb = merge(v_station, sb, by=".id", all.x = T)
+
+    # covert to array for netcdf
+  v_temp = reshape2::acast(sb[,.(pressure, station, temperature)], pressure ~ station)
+
+  # setup netcdf
+  nc = create.nc(paste0(session$global_metadata$id, ".nc"))
+
+  # Dimensions
+  dim.def.nc(nc, "pressure", length(deepest_dip$pressure))
+  dim.def.nc(nc, "profile", length(session$data))
+
+  var.def.nc(nc, "pressure", "NC_FLOAT", "pressure")
+    att.put.nc(nc, "pressure", "standard_name", "NC_CHAR", "sea_water_pressure")
+    att.put.nc(nc, "pressure", "units", "NC_CHAR", "dbar")
+    att.put.nc(nc, "pressure", "axis", "NC_CHAR", "pressure")
+    att.put.nc(nc, "pressure", "positive", "NC_CHAR", "down")
+    att.put.nc(nc, "pressure", "comment", "NC_CHAR", "pressure from Digiquartz pressure transducer")
+  var.put.nc(nc, "pressure", deepest_dip$pressure)
+
+  var.def.nc(nc, "profile", "NC_INT", "profile")
+    att.put.nc(nc, "profile", "long_name", "NC_CHAR", "Unique identifier for each feature instance")
+    att.put.nc(nc, "profile", "cf_role", "NC_CHAR", "profile_id")
+  var.put.nc(nc, "profile", as.integer(v_station$station))
+
+  var.def.nc(nc, "time", "NC_DOUBLE", "profile")
+    att.put.nc(nc, "time", "standard_name", "NC_CHAR", "time")
+    att.put.nc(nc, "time", "units", "NC_CHAR", "seconds since 1970-01-01 00:00:00 0:00")
+    att.put.nc(nc, "time", "calendar", "NC_CHAR", "gregorian") # note POSIXct assumes gregorian calendar
+    att.put.nc(nc, "time", "axis", "NC_CHAR", "T")
+    att.put.nc(nc, "time", "_FillValue", "NC_DOUBLE", -99999)
+    att.put.nc(nc, "time", "comment", "NC_CHAR", "Time taken from ESM2 RTC, time signifies start of burst measurement period")
+  var.put.nc(nc, "time", as.numeric(v_time$startTime))
+
+  var.def.nc(nc, "lat", "NC_DOUBLE", "profile")
+    att.put.nc(nc, "lat", "standard_name", "NC_CHAR", "latitude")
+    att.put.nc(nc, "lat", "units", "NC_CHAR", "degrees_north")
+    att.put.nc(nc, "lat", "axis", "NC_CHAR", "Y")
+    att.put.nc(nc, "lat", "valid_min", "NC_FLOAT", -90)
+    att.put.nc(nc, "lat", "valid_max", "NC_FLOAT", 90)
+    att.put.nc(nc, "lat", "grid_mapping", "NC_CHAR", "crs")
+    att.put.nc(nc, "lat", "comment", "NC_CHAR", "position is recorded during deployment and verified against satelite telemetry")
+  var.put.nc(nc, "lat", v_lat$latitude)
+
+  var.def.nc(nc, "lon", "NC_DOUBLE", "profile")
+    att.put.nc(nc, "lon", "standard_name", "NC_CHAR", "longitude")
+    att.put.nc(nc, "lon", "units", "NC_CHAR", "degrees_east")
+    att.put.nc(nc, "lon", "axis", "NC_CHAR", "X")
+    att.put.nc(nc, "lon", "valid_min", "NC_FLOAT", -180)
+    att.put.nc(nc, "lon", "valid_max", "NC_FLOAT", 180)
+    att.put.nc(nc, "lon", "grid_mapping", "NC_CHAR", "crs")
+    att.put.nc(nc, "lon", "comment", "NC_CHAR", "position is recorded during deployment and verified against satelite telemetry")
+  var.put.nc(nc, "lon", v_lon$longitude)
+
+  var.def.nc(nc, "crs", "NC_INT", NA) # WGS84
+    att.put.nc(nc, "crs", "grid_mapping_name", "NC_CHAR", "latitude_longitude")
+    att.put.nc(nc, "crs", "espg_code", "NC_CHAR", "ESPG:4326")
+    att.put.nc(nc, "crs", "longitude_of_prime_meridian", "NC_DOUBLE", 0.0)
+    att.put.nc(nc, "crs", "semi_major_axis", "NC_DOUBLE", 6378137.0)
+    att.put.nc(nc, "crs", "inverse_flattening", "NC_DOUBLE", 298.257223563)
+
+    # data
+  var.def.nc(nc, "temperature", "NC_DOUBLE", c("pressure", "profile"))
+    att.put.nc(nc, "temperature", "long_name", "NC_CHAR", "Water temperature, IPTS-90" )
+    att.put.nc(nc, "temperature", "standard_name", "NC_CHAR", "sea_water_temperature" )
+    att.put.nc(nc, "temperature", "units", "NC_CHAR", "degree_Celsius" )
+    att.put.nc(nc, "temperature", "_FillValue", "NC_DOUBLE", -99999 )
+    att.put.nc(nc, "temperature", "valid_min", "NC_DOUBLE", -2.5 )
+    att.put.nc(nc, "temperature", "valid_max", "NC_DOUBLE", 45 )
+    att.put.nc(nc, "temperature", "coordinates", "NC_CHAR", "time lat lon pressure" )
+    att.put.nc(nc, "temperature", "instrument", "NC_CHAR", "instrument_temp" )
+    att.put.nc(nc, "temperature", "grid_mapping", "NC_CHAR", "crs" )
+    att.put.nc(nc, "temperature", "coverage_content_type", "NC_CHAR", "physicalMeasurement" )
+  var.put.nc(nc, "temperature", v_temp)
+
+  for(g in names(session$global_metadata)){
+    att.put.nc(nc, "NC_GLOBAL", g, "NC_CHAR", session$global_metadata[[g]])
+  }
+  att.put.nc(nc, "NC_GLOBAL", "geospatial_lat_min", "NC_FLOAT", min(v_lat$latitude))
+  att.put.nc(nc, "NC_GLOBAL", "geospatial_lat_max", "NC_FLOAT", max(v_lat$latitude))
+  att.put.nc(nc, "NC_GLOBAL", "geospatial_lon_min", "NC_FLOAT", min(v_lon$longitude))
+  att.put.nc(nc, "NC_GLOBAL", "geospatial_lon_max", "NC_FLOAT", max(v_lon$longitude))
+
+  sync.nc(nc)
+  close.nc(nc)
 }
 
