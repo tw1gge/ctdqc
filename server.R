@@ -19,6 +19,13 @@ shinyServer(function(input, output, session) {
   # make dynamic file list for storing the CTD objects, a list of S4 objects
   profiles = reactiveValues(data = NULL, bottles = NA)
 
+  observe({
+    for(m in grep("netcdf-", names(input), value=T)){
+      # profiles$global_metadata[[m]] = isolate(input[[m]])
+      profiles$global_metadata[[m]] = input[[m]]
+    }
+  })
+
    ## read data
   observeEvent(input$read_files, {
     filelist = list.files(parseDirPath(volumes, input$directory), full.names = F, pattern = "*.cnv")
@@ -404,15 +411,17 @@ shinyServer(function(input, output, session) {
   })
 
   output$edit_metadata = renderUI({
-      lapply(editable_metadata, function(i){
-        # generate UI dynamically
-        id = paste0("netcdf-", i)
-        textInput(id, i, value=profiles$global_metadata[[i]])
-      })
+    validate(need(profiles$global_metadata, "data not loaded"))
+    lapply(editable_metadata, function(i){
+      # generate UI dynamically
+      id = paste0("netcdf-", i)
+      textInput(id, i, value=profiles$global_metadata[[i]])
     })
+  })
 
   output$metadata = renderText({
-    paste(names(profiles$global_metadata), " ; ", profiles$global_metadata, collapse="\n")
+    validate(need(profiles$global_metadata, ""))
+    paste(names(profiles$global_metadata), "; ", profiles$global_metadata, collapse="\n")
   })
 
 })
