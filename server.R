@@ -239,7 +239,7 @@ shinyServer(function(input, output, session) {
     session$original = profiles$original
     session$positions = profiles$positions
     session$global_metadata = profiles$global_metadata
-    if(!is.na(profiles$bottles)){
+    if(!any(is.na(profiles$bottles))){
       session$bottles = hot_to_r(input$bottles)
     }
     save(session, file = paste0(dir, "/CTDQC.rdata"))
