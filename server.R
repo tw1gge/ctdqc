@@ -50,11 +50,6 @@ shinyServer(function(input, output, session) {
     if(length(unique(profiles$positions$cruise)) > 1){warning("Cruise ID differ between cnv files!")}
   })
 
-  observeEvent(input$make_netcdf, {
-    #
-    print("make thing")
-  })
-
   observeEvent(input$read_bottle, {
       # make two file lists for comparison
     filelist = list.files(parseDirPath(volumes, input$directory), full.names = F, pattern = "*.cnv")
@@ -258,6 +253,16 @@ shinyServer(function(input, output, session) {
       }
     })
   })
+
+  observeEvent(input$make_netcdf, {
+    if(check.qc.done(profiles$data)){
+      write.ctd.netcdf(profiles)
+    }
+    else{
+      warning("not done: QC is not complete for all dips")
+    }
+  })
+
 
   ## Ui and controls
     # update select input when filelist changes
