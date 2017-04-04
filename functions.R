@@ -154,15 +154,12 @@ netcdf.metadata <- function(d, positions){
   metadata[["licence"]] = "OGLv3.0 https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
   metadata[["standard_name_volcabulary"]] = "CF Standard Name Table v39"
   metadata[["date_created"]] = strftime(lubridate::now(tzone="UTC"), "%Y-%M-%dT%H:%M:%SZ")
-  metadata[["creator_name"]] = "Tom Hull"
+  metadata[["creator"]] = "Tom Hull"
   metadata[["creator_email"]] = "tom.hull@cefas.co.uk"
   metadata[["creator_url"]] = "http://www.cefas.co.uk"
   metadata[["institution"]] = "Centre for Environment Fisheries and Aquaculture Science"
   metadata[["project"]] = ""
-  metadata[["geospatial_lat_min"]] = min(positions$latitude)
-  metadata[["geospatial_lat_max"]] = max(positions$latitude)
-  metadata[["geospatial_lon_min"]] = min(positions$longitude)
-  metadata[["geospatial_lon_max"]] = max(positions$longitude)
+    # note geospatial ranges are calculated later
   metadata[["geospatial_lat_units"]]= "degrees_north"
   metadata[["geospatial_lon_units"]] = "degrees_east"
   metadata[["time_coverage_start"]] = strftime(min(positions$startTime), "%Y-%M-%dT%H:%M:%SZ")
@@ -175,6 +172,5 @@ netcdf.metadata <- function(d, positions){
 
 write.ctd.netcdf <- function(d, global_metadata){
   require(RNetCDF)
-  print(Sys.info())
 }
 
