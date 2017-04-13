@@ -4,9 +4,10 @@ library(oce)
 library(data.table)
 library(leaflet)
 library(rhandsontable)
+library(xml2)
 
 source("functions.R", local = T)
-CTDQC_version = 1.1
+CTDQC_version = 1.2
 editable_metadata = c("id", "title", "summary", "processing_level", "comment", "acknowledgment", "licence", "project", "creator", "creator_email")
 
 shinyServer(function(input, output, session) {
@@ -45,6 +46,7 @@ shinyServer(function(input, output, session) {
     profiles$original = d
       # make a summary of the positions for the map
     profiles$positions = extract.metadata(profiles$data, c("filename", "startTime", "station", "longitude", "latitude", "cruise"))
+    profiles$sensors = parse_sbe_xml(profiles$data)
     profiles$global_metadata = netcdf.metadata(profiles$data, profiles$positions)
     profiles$global_metadata_default = profiles$global_metadata
     if(length(unique(profiles$positions$cruise)) > 1){warning("Cruise ID differ between cnv files!")}

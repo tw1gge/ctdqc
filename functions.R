@@ -135,6 +135,21 @@ extract.metadata <- function(oce, vars){
     rbindlist(lapply(oce , function(x) `@`( x , metadata)[vars]))
 }
 
+parse_sbe_xml <- function(oce){
+  # function to extract information from sbe xml header
+  x = lapply(oce , function(x) `@`( x , metadata)[["header"]])
+  startLines = lapply(x, grep, pattern="<Sensors count")
+  endLines = lapply(x, grep, pattern="</Sensors>")
+  x2 = lapply(1:length(x), function(i) x[[i]][startLines[[i]]:endLines[[i]]]) # subset each element of list
+  if(length(unique(x2)) != 1){warning("xml header differs between files")} # check headers are all the same
+  x = substring(x2[[1]], 2) # take one copy and remove first "#"
+  x = xml2::read_xml(paste(x, collapse="\n")) # convert to xml
+  sensors = melt(as_list(xml2::xml_find_all(x, "//sensor"))) # extract sensor nodes and convert to list
+  sensors = subset(sensors, L3 %in% c("SensorName", "SerialNumber", "CalibrationDate", "GainSetting")) # subset just params we want
+  sensors = dcast(sensors, L1 + L2 ~ L3) # cast to wide table
+  return(sensors)
+}
+
 netcdf.metadata <- function(d, positions){
   # generates metadata from file
   metadata = list()
