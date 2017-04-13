@@ -105,7 +105,9 @@ shinyUI(fluidPage(
                    actionButton('licor', "Process Licor PAR", icon=icon("beer"))
                  ),
                  inputPanel(
-                   h4("Flurometer")
+                   h4("Flurometer"),
+                   actionButton('flag_flu', "Flag quenched chlorophyll fluorometry", icon=icon("ban")),
+                   numericInput('par_flu_threshold', label = "Chlorophyll quenching PAR threshold", value = 1)
                  ),
                  inputPanel(
                    h4("Secondary CT"),

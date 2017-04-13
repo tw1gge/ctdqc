@@ -221,10 +221,26 @@ shinyServer(function(input, output, session) {
         profiles$data[[input$select_profile]]@data[[input$par_channel]],
         input$licor_factor, input$licor_offset)
 
+    # add to untrimmed
+    profiles$untrimmed[[input$select_profile]] = ctdAddColumn(profiles$untrimmed[[input$select_profile]],
+                                                         licor_par, "par", label = "par",
+                                                         unit = list(name = expression(umol~s-1~m-2), scale = "PAR/Irradiance, Cefas Licor PAR"))
     profiles$data[[input$select_profile]] = ctdAddColumn(profiles$data[[input$select_profile]],
                                                          licor_par, "par", label = "par",
-                                                         unit = list(name = expression(uE), scale = "PAR/Irradiance, Cefas Licor PAR"))
+                                                         unit = list(name = expression(umol~s-1~m-2), scale = "PAR/Irradiance, Cefas Licor PAR"))
     processingLog(profiles$data[[input$select_profile]]) = paste("PAR processed with factor =", input$licor_factor, ",offset =", input$licor_offset)
+  })
+
+  observeEvent(input$flag_flu, {
+    if("par" %in% names(profiles$data[[input$select_profile]]@data)){
+      profiles$data[[input$select_profile]][["fluorescence"]] [profiles$data[[input$select_profile]][["par"]] > input$par_flu_threshold] = NA
+      profiles$untrimmed[[input$select_profile]][["fluorescence"]] [profiles$untrimmed[[input$select_profile]][["par"]] > input$par_flu_threshold] = NA
+      log = paste("fluorometry values where PAR >", input$par_flu_threshold, " have been flagged")
+      processingLog(profiles$data[[input$select_profile]]) = log
+    }
+    else{
+      warning("PAR has not been calculated")
+    }
   })
 
   observeEvent(input$secondCT, {
