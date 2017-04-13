@@ -225,6 +225,14 @@ shinyServer(function(input, output, session) {
     processingLog(profiles$data[[input$select_profile]]) = paste("PAR processed with factor =", input$licor_factor, ",offset =", input$licor_offset)
   })
 
+  observeEvent(input$secondCT, {
+    profiles$data[[input$select_profile]][["temperature"]] = profiles$data[[input$select_profile]][["temperature2"]]
+    profiles$data[[input$select_profile]][["conductivity"]] = profiles$data[[input$select_profile]][["conductivity2"]]
+    profiles$data[[input$select_profile]][["salinity"]] = profiles$data[[input$select_profile]][["salinity2"]]
+    profiles$data[[input$select_profile]][["salinityDifference"]] = 0
+    processingLog(profiles$data[[input$select_profile]]) = paste("Primary CT data replaced with that from secondary")
+  })
+
   ## Write out
 
   observeEvent(input$write_rdata,{

@@ -106,6 +106,10 @@ shinyUI(fluidPage(
                  ),
                  inputPanel(
                    h4("Flurometer")
+                 ),
+                 inputPanel(
+                   h4("Secondary CT"),
+                   actionButton('secondCT', "Overwrite Primary CT with secondary", icon=icon("reply-all"))
                  )
                  ),
         tabPanel("Bottles",
