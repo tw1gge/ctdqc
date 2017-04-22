@@ -1,10 +1,10 @@
-library(shiny)
-library(shinyFiles)
-library(oce)
-library(data.table)
-library(leaflet)
-library(rhandsontable)
-library(xml2)
+library(shiny,quietly=T)
+library(shinyFiles,quietly=T)
+library(oce, quietly=T)
+library(data.table, quietly=T)
+library(leaflet, quietly=T)
+library(rhandsontable, quietly=T)
+library(xml2, quietly=T)
 
 source("functions.R", local = T)
 CTDQC_version = 1.2
@@ -25,31 +25,33 @@ shinyServer(function(input, output, session) {
     filelist = list.files(parseDirPath(volumes, input$directory), full.names = F, pattern = "*.cnv")
     dir = parseDirPath(volumes, input$directory)
     d = list()
+    m = list()
+    extraParams = list(columndepth=list(name="sfdSM", unit="m", scale=""))
     withProgress(message = 'loading files...', value = 0, {
       for(i in filelist){
         # Increment the progress bar, and update the detail text.
         incProgress(1/length(filelist), detail = paste("loading", i))
-        d[[i]] = read.ctd.sbe(paste0(dir,"/",i))
+        d[[i]] = read.ctd.sbe(paste0(dir,"/",i), columns=extraParams)
+        m[[i]] = parse_sbe_xml(d[[i]])
       }
     })
       # check if filter has been applied
     headers = extract.metadata(d, "header")
     filtered = stringr::str_count(headers, "filter_low_pass_A_vars = prDM")
-    if(filtered < length(d)){
-      warning("WARNING - pressure filter has not been applied for all profiles!")
-    }
 
       # insert data into data slot
     profiles$data = d
+    profiles$metadata = m
     profiles$untrimmed = d
       # make a backup for use by revert
     profiles$original = d
       # make a summary of the positions for the map
     profiles$positions = extract.metadata(profiles$data, c("filename", "startTime", "station", "longitude", "latitude", "cruise"))
-    profiles$sensors = parse_sbe_xml(profiles$data)
     profiles$global_metadata = netcdf.metadata(profiles$data, profiles$positions)
     profiles$global_metadata_default = profiles$global_metadata
-    if(length(unique(profiles$positions$cruise)) > 1){warning("Cruise ID differ between cnv files!")}
+    if(length(unique(profiles$positions$cruise)) > 1){warning("WARNING - Cruise ID differ between cnv files!")}
+    if(filtered < length(d)){warning("WARNING - pressure filter has not been applied for all profiles!") }
+    if(length(unique(m)) != 1){ warning("WARNING - xml header differs between files") }
   })
 
   observeEvent(input$read_bottle, {

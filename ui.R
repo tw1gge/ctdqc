@@ -1,7 +1,7 @@
-library(shiny)
-library(shinyFiles)
-library(leaflet)
-library(rhandsontable)
+library(shiny, quietly=T)
+library(shinyFiles, quietly=T)
+library(leaflet, quietly=T)
+library(rhandsontable, quietly=T)
 
 vchannels = c("v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7")
 

@@ -136,16 +136,15 @@ extract.metadata <- function(oce, vars){
 }
 
 parse_sbe_xml <- function(oce){
-  # function to extract information from sbe xml header
-  require(xml2)
-  x = lapply(oce , function(x) `@`( x , metadata)[["header"]])
-  startLines = lapply(x, grep, pattern="<Sensors count")
-  endLines = lapply(x, grep, pattern="</Sensors>")
-  x2 = lapply(1:length(x), function(i) x[[i]][startLines[[i]]:endLines[[i]]]) # subset each element of list
-  if(length(unique(x2)) != 0){stop("xml header differs between files")}
-  x = substring(x2[[1]], 2) # take one copy and remove first "#"
-  x = xml2::read_xml(paste(x, collapse="\n")) # convert to xml
-  xml_attr(x, "SerialNumber")
+  hdr = oce@metadata$header # extract information from sbe xml header
+  startLine = grep(hdr, pattern="<Sensors count")
+  endLine = grep(hdr, pattern="</Sensors>")
+  hdr = hdr[startLine:endLine] # subset each element of list
+  hdr = substring(hdr, 2) # drop the '#'
+  hdr = paste(hdr, collapse="\n") # unvector it
+  hdr = xml2::read_xml(hdr)
+  hdr = xml2::as_list(hdr)
+  return(hdr)
 }
 
 netcdf.metadata <- function(d, positions){
