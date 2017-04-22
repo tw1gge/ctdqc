@@ -222,12 +222,12 @@ shinyServer(function(input, output, session) {
         input$licor_factor, input$licor_offset)
 
     # add to untrimmed
-    profiles$untrimmed[[input$select_profile]] = ctdAddColumn(profiles$untrimmed[[input$select_profile]],
-                                                         licor_par, "par", label = "par",
-                                                         unit = list(name = expression(umol~s-1~m-2), scale = "PAR/Irradiance, Cefas Licor PAR"))
-    profiles$data[[input$select_profile]] = ctdAddColumn(profiles$data[[input$select_profile]],
-                                                         licor_par, "par", label = "par",
-                                                         unit = list(name = expression(umol~s-1~m-2), scale = "PAR/Irradiance, Cefas Licor PAR"))
+    profiles$untrimmed[[input$select_profile]] = oceSetData(profiles$untrimmed[[input$select_profile]],
+                                                         "par", licor_par,
+                                                         units = list(unit=expression(umol~s-1~m-2), scale = "PAR/Irradiance, Cefas Licor PAR"))
+    profiles$data[[input$select_profile]] = oceSetData(profiles$data[[input$select_profile]],
+                                                         "par", licor_par,
+                                                         units = list(unit=expression(umol~s-1~m-2), scale = "PAR/Irradiance, Cefas Licor PAR"))
     processingLog(profiles$data[[input$select_profile]]) = paste("PAR processed with factor =", input$licor_factor, ",offset =", input$licor_offset)
   })
 
