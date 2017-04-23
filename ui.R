@@ -106,8 +106,8 @@ shinyUI(fluidPage(
                  ),
                  inputPanel(
                    h4("Flurometer"),
-                   actionButton('flag_flu', "Flag quenched chlorophyll fluorometry", icon=icon("ban")),
-                   numericInput('par_flu_threshold', label = "Chlorophyll quenching PAR threshold", value = 1)
+                   numericInput('par_flu_threshold', label = "Chlorophyll quenching PAR threshold", value = 1),
+                   actionButton('flag_flu', "Flag quenched chlorophyll fluorometry", icon=icon("ban"))
                  ),
                  inputPanel(
                    h4("Secondary CT"),
@@ -115,7 +115,7 @@ shinyUI(fluidPage(
                  )
                  ),
         tabPanel("Bottles",
-                 rHandsontableOutput("bottles"),
+                   rHandsontableOutput("bottles"),
                  fluidRow(
                    h4("CTD / Niskin regressions"),
                    selectInput("Plot_bottle_select", NULL, choices = c("Select parameter" = "", "Salinity", "Oxygen Optode", "Oxygen RINKO", "Chlorophyll")),
@@ -124,8 +124,9 @@ shinyUI(fluidPage(
                  ),
         tabPanel("Metadata",
                  # dynamically generated UI
-                 uiOutput("edit_metadata"),
-                 verbatimTextOutput("metadata")
+                 fluidRow(
+                   uiOutput("edit_metadata"),
+                   verbatimTextOutput("metadata")
                  )
       )
     )
