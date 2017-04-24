@@ -121,7 +121,7 @@ shinyServer(function(input, output, session) {
   })
 
   observeEvent(input$decimate,{
-    profiles$data[[input$select_profile]] = ctdDecimate(profiles$data[[input$select_profile]], p = input$bin_size)
+    profiles$data = lapply(profiles$data, ctdDecimate, p=input$bin_size)
   })
 
   observeEvent(input$revert,{
