@@ -161,7 +161,7 @@ netcdf.metadata <- function(d, positions){
   metadata[["naming_authority"]] = "uk.co.cefas"
   metadata[["history"]] = ""
   metadata[["source"]] = "CTD rossette system"
-  metadata[["processing_level"]] = "QC and processing done following Cefas SBE CTD QC SOP v1.1"
+  metadata[["processing_level"]] = "QC and processing done following Cefas SBE CTD QC SOP v1.2"
   metadata[["comment"]] = ""
   metadata[["acknowledgement"]] = ""
   metadata[["licence"]] = "OGLv3.0 https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
@@ -183,10 +183,6 @@ netcdf.metadata <- function(d, positions){
   return(metadata)
 }
 
-check.qc.done <- function(session){
-  return(T)
-}
-
 write.ctd.netcdf <- function(session, sensor_metadata){
   require(RNetCDF)
   require(uuid)
@@ -196,7 +192,7 @@ write.ctd.netcdf <- function(session, sensor_metadata){
   log = rbindlist(lapply(session$data , function(x) as.data.frame(`@`( x , processingLog))), idcol=T)
   logsummary = log[,.(QC = any(grepl("QC Complete", value))), by=.id] # are any of the values...
 
-  if(all(logsummary)){
+  if(all(logsummary$QC) == F){
     warning("WARNING - QC not complete")
     return(NULL)
   }
@@ -298,7 +294,13 @@ write.ctd.netcdf <- function(session, sensor_metadata){
       att.put.nc(nc, var, "instrument", "NC_CHAR", metadata$instid)
       att.put.nc(nc, var, "grid_mapping", "NC_CHAR", "crs" )
       att.put.nc(nc, var, "coverage_content_type", "NC_CHAR", "physicalMeasurement" )
-    var.put.nc(nc, var, v_)
+      var.put.nc(nc, var, v_)
+
+    var.def.nc(nc, metadata$instid, "NC_BYTE", "profile")
+      att.put.nc(nc, metadata$instid, "long_name", "NC_CHAR", metadata$sensor_name)
+      att.put.nc(nc, metadata$instid, "nodc_name", "NC_CHAR", metadata$sensor_nodc)
+      att.put.nc(nc, metadata$instid, "make_model", "NC_CHAR", metadata$sensor_make )
+      att.put.nc(nc, metadata$instid, "precision", "NC_CHAR", as.character(metadata$precision))
   }
 
   for(g in names(session$global_metadata)){
