@@ -102,6 +102,7 @@ shinyServer(function(input, output, session) {
     profiles$positions = session$positions
     profiles$bottles = session$bottles
     profiles$global_metadata = session$global_metadata
+    profiles$global_metadata_default = profiles$global_metadata
   })
 
   ## Processes
