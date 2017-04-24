@@ -9,6 +9,7 @@ library(xml2, quietly=T)
 source("functions.R", local = T)
 CTDQC_version = 1.2
 editable_metadata = c("id", "title", "summary", "processing_level", "comment", "acknowledgment", "licence", "project", "creator", "creator_email")
+sensor_metadata = fread("sensor_table.csv")
 
 shinyServer(function(input, output, session) {
 
@@ -38,6 +39,8 @@ shinyServer(function(input, output, session) {
       # check if filter has been applied
     headers = extract.metadata(d, "header")
     filtered = stringr::str_count(headers, "filter_low_pass_A_vars = prDM")
+
+
 
       # insert data into data slot
     profiles$data = d
@@ -107,10 +110,12 @@ shinyServer(function(input, output, session) {
   observeEvent(input$pumped,{
     profiles$data[[input$select_profile]] = subset(profiles$data[[input$select_profile]], pumpStatus == 1)
   })
+
   observeEvent(input$trim,{
     profiles$data[[input$select_profile]] = ctdTrim(profiles$data[[input$select_profile]],
                                                     method = "scan", parameters = round(c(input$scan_brush$xmin, input$scan_brush$xmax)))
   })
+
   observeEvent(input$autotrim,{
     profiles$data[[input$select_profile]] = ctdTrim(profiles$data[[input$select_profile]], parameters = list(pmin=1))
   })
@@ -317,17 +322,17 @@ shinyServer(function(input, output, session) {
 
   ## Output
 
-  output$summary <- renderPrint(
+  output$summary <- renderPrint({
     # workaround for oce function not liking null data
     if(!is.null(profiles$data[[input$select_profile]]))
     summary(profiles$data[[input$select_profile]])
-    )
-  output$xml <- renderText(
+    })
+  output$xml <- renderText({
     # workaround for oce function not liking null data
-      if(!is.null(profiles$data[[input$select_profile]])){
-        paste(profiles$data[[input$select_profile]]@metadata$header, collapse="\n")
-      }
-    )
+    if(!is.null(profiles$data[[input$select_profile]])){
+      paste(profiles$data[[input$select_profile]]@metadata$header, collapse="\n")
+    }
+    })
   output$scan_plot = renderPlot({
       # check if there is data, give warning if not
     validate(need(!is.null(profiles$data[[input$select_profile]]), "Data not loaded"))
@@ -359,7 +364,7 @@ shinyServer(function(input, output, session) {
     if(!is.null(profiles$data[[input$select_profile]]))
     plotTS(profiles$data[[input$select_profile]])
     })
-  output$map = renderLeaflet(
+  output$map = renderLeaflet({
     # workaround for oce function not liking null data
     if(!is.null(profiles$data[[input$select_profile]]))
     leaflet(profiles$positions) %>%
@@ -368,11 +373,10 @@ shinyServer(function(input, output, session) {
       setView(lat = profiles$data[[input$select_profile]]@metadata$latitude,
               lng = profiles$data[[input$select_profile]]@metadata$longitude,
               zoom = 7)
-  )
+  })
   output$datatable = renderDataTable({
     data.frame(profiles$data[[input$select_profile]]@data)
   })
-
   output$bottles = renderRHandsontable({
       # editable table
     validate(need(profiles$bottles, "bottle file not loaded"))
@@ -426,12 +430,10 @@ shinyServer(function(input, output, session) {
       profiles$bottle_coef[["oxygen_RINKO"]] = list(var = "oxygen_RINKO", slope = coef(m)[2], intercept = coef(m)[1])
     }
   })
-
   output$bottle_coef = renderTable({
     print(rbindlist(profiles$bottle_coef))
     rbindlist(profiles$bottle_coef)
   })
-
   output$progress = renderTable({
     # fetch processing log then grep for string to check progress
     log = lapply(profiles$data , function(x) `@`( x , processingLog))
@@ -441,7 +443,6 @@ shinyServer(function(input, output, session) {
       "done" = done
       )
   })
-
   output$edit_metadata = renderUI({
     validate(need(profiles$global_metadata_default, "data not loaded"))
 
@@ -452,7 +453,6 @@ shinyServer(function(input, output, session) {
       textInput(id, i, value=default_value)
     })
   })
-
   output$metadata = renderText({
     validate(need(profiles$global_metadata, ""))
     for(i in editable_metadata){
