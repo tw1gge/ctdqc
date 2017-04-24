@@ -4,6 +4,15 @@ library(leaflet, quietly=T)
 library(rhandsontable, quietly=T)
 
 vchannels = c("v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7")
+temperature_serials = c("5558", "5823")
+conductivity_serials = c("4499", "4523")
+pressure_serials = c("1274")
+par_serials = c("49")
+altimeter_serials = c("68799")
+turbidity_serials = c("11618")
+fluorometer_serials = c("2315")
+optode_serials = c("752")
+rinko_serials = c("0263")
 
 shinyUI(fluidPage(
 
@@ -31,7 +40,6 @@ shinyUI(fluidPage(
 
       h4("Progress"),
       actionButton('mark_complete', "Mark QC complete", icon=icon("check-square")),
-      actionButton('make_netcdf', "Publish NetCDF", icon=icon("object-group")),
       tableOutput("progress")
     ),
 
@@ -124,10 +132,28 @@ shinyUI(fluidPage(
                  ),
         tabPanel("Metadata",
                  # dynamically generated UI
+                 actionButton('make_netcdf', "Publish NetCDF", icon=icon("object-group")),
                  fluidRow(
-                   uiOutput("edit_metadata"),
-                   verbatimTextOutput("metadata")
-                 )
+                   column(6,
+                     h4("Global metadata"),
+                     uiOutput("edit_metadata")
+                     ),
+                   column(6,
+                     h4("Sensor serial numbers"),
+                     h5("Check against xml!"),
+                     selectInput("serial_temp", "Temperature", choices=temperature_serials),
+                     selectInput("serial_cond", "Conductivity", choices=conductivity_serials),
+                     selectInput("serial_prs", "Pressure", choices=pressure_serials),
+                     selectInput("serial_alt", "Altimeter", choices=altimeter_serials),
+                     selectInput("serial_par", "PAR", choices=par_serials),
+                     selectInput("serial_ftu", "Turbidity", choices=turbidity_serials),
+                     selectInput("serial_flu", "Fluorometer", choices=fluorometer_serials),
+                     selectInput("serial_rinko", "Rinko", choices=rinko_serials),
+                     selectInput("serial_optode", "Optode", choices=optode_serials)
+                     )
+                   ),
+                 verbatimTextOutput("metadata")
+        )
       )
     )
   )
