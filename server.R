@@ -38,7 +38,7 @@ shinyServer(function(input, output, session) {
     })
       # check if filter has been applied
     headers = extract.metadata(d, "header")
-    filtered = stringr::str_count(headers, "filter_low_pass_A_vars = prDM")
+    filtered = stringr::str_count(headers, "filter_low_pass")
 
 
 
@@ -334,8 +334,8 @@ shinyServer(function(input, output, session) {
       # check if there is data, give warning if not
     validate(need(!is.null(profiles$data[[input$select_profile]]), "Data not loaded"))
     validate(
-      need(any(grepl("filter_low_pass_A_vars = prDM",
-                     profiles$data[[input$select_profile]]@metadata$header)),
+      need(
+        any(grepl("filter_low_pass", profiles$data[[input$select_profile]]@metadata$header)),
            "Pressure filter has not been applied for this profile")
       )
     plotScan(profiles$data[[input$select_profile]])
