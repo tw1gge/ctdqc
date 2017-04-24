@@ -184,34 +184,45 @@ netcdf.metadata <- function(d, positions){
 }
 
 check.qc.done <- function(session){
-  # validates that all QC steps are done
-  log = rbindlist(lapply(session$data , function(x) `@`( x , processingLog)), idcol=T)
-  number_dips = length(session$data)
-  log = as.data.frame(table(log$value))
-  grep("QC Complete", log)
   return(T)
 }
 
-write.ctd.netcdf <- function(session){
+write.ctd.netcdf <- function(session, sensor_metadata){
   require(RNetCDF)
   require(uuid)
   require(reshape2)
 
+  # validates that all QC steps are done
+  log = rbindlist(lapply(session$data , function(x) as.data.frame(`@`( x , processingLog))), idcol=T)
+  logsummary = log[,.(QC = any(grepl("QC Complete", value))), by=.id] # are any of the values...
+
+  if(all(logsummary)){
+    warning("WARNING - QC not complete")
+    return(NULL)
+  }
+
   # reshape and process data
-  pressures = rbindlist(lapply(session$data , function(x) `@`( x , data)["pressure"]), idcol=T)
-  pressures[, max := max(pressure), by=.id]
+  pressures = lapply(session$data , function(x) as.data.frame(`@`( x , data)["pressure"]))
+  pressures = rbindlist(pressures, idcol="id")
+  pressures[, max := max(pressure), by=id]
   deepest_dip = pressures[max(max) == max]
 
-  v_lat = rbindlist(lapply(session$data , function(x) `@`( x , metadata)["latitude"]), idcol=T)
-  v_lon = rbindlist(lapply(session$data , function(x) `@`( x , metadata)["longitude"]), idcol=T)
-  v_time = rbindlist(lapply(session$data , function(x) `@`( x , metadata)["startTime"]), idcol=T)
-  v_station = rbindlist(lapply(session$data , function(x) `@`( x , metadata)["station"]), idcol=T)
+  v_lat = lapply(session$data , function(x) as.data.frame(`@`( x , metadata)["latitude"]))
+  v_lat = rbindlist(v_lat, idcol="id")
+  v_lon = lapply(session$data , function(x) as.data.frame(`@`( x , metadata)["longitude"]))
+  v_lon = rbindlist(v_lon, idcol="id")
+  v_time = lapply(session$data , function(x) as.data.frame(`@`( x , metadata)["startTime"]))
+  v_time = rbindlist(v_time, idcol="id")
+  v_station = lapply(session$data , function(x) as.data.frame(`@`( x , metadata)["station"]))
+  v_station = rbindlist(v_station, idcol="id")
 
-  sb = rbindlist(lapply(session$data , function(x) `@`( x , data)), idcol=T, use.names=T, fill=T)
-  sb = merge(v_station, sb, by=".id", all.x = T)
+    # check station numbers unique
 
-    # covert to array for netcdf
-  v_temp = reshape2::acast(sb[,.(pressure, station, temperature)], pressure ~ station)
+  sb = rbindlist(lapply(session$data , function(x) as.data.frame(`@`( x , data))),
+                 idcol="id", use.names=T, fill=T)
+  sb = merge(v_station, sb, by="id", all.x = T)
+
+  sensor_metadata = sensor_metadata[parameter %in% colnames(sb)]
 
   # setup netcdf
   nc = create.nc(paste0(session$global_metadata$id, ".nc"))
@@ -226,12 +237,12 @@ write.ctd.netcdf <- function(session){
     att.put.nc(nc, "pressure", "axis", "NC_CHAR", "pressure")
     att.put.nc(nc, "pressure", "positive", "NC_CHAR", "down")
     att.put.nc(nc, "pressure", "comment", "NC_CHAR", "pressure from Digiquartz pressure transducer")
-  var.put.nc(nc, "pressure", deepest_dip$pressure)
+    var.put.nc(nc, "pressure", deepest_dip$pressure)
 
   var.def.nc(nc, "profile", "NC_INT", "profile")
     att.put.nc(nc, "profile", "long_name", "NC_CHAR", "Unique identifier for each feature instance")
     att.put.nc(nc, "profile", "cf_role", "NC_CHAR", "profile_id")
-  var.put.nc(nc, "profile", as.integer(v_station$station))
+    var.put.nc(nc, "profile", as.integer(v_station$station))
 
   var.def.nc(nc, "time", "NC_DOUBLE", "profile")
     att.put.nc(nc, "time", "standard_name", "NC_CHAR", "time")
@@ -240,7 +251,7 @@ write.ctd.netcdf <- function(session){
     att.put.nc(nc, "time", "axis", "NC_CHAR", "T")
     att.put.nc(nc, "time", "_FillValue", "NC_DOUBLE", -99999)
     att.put.nc(nc, "time", "comment", "NC_CHAR", "Time taken from ESM2 RTC, time signifies start of burst measurement period")
-  var.put.nc(nc, "time", as.numeric(v_time$startTime))
+    var.put.nc(nc, "time", as.numeric(v_time$startTime))
 
   var.def.nc(nc, "lat", "NC_DOUBLE", "profile")
     att.put.nc(nc, "lat", "standard_name", "NC_CHAR", "latitude")
@@ -250,7 +261,7 @@ write.ctd.netcdf <- function(session){
     att.put.nc(nc, "lat", "valid_max", "NC_FLOAT", 90)
     att.put.nc(nc, "lat", "grid_mapping", "NC_CHAR", "crs")
     att.put.nc(nc, "lat", "comment", "NC_CHAR", "position is recorded during deployment and verified against satelite telemetry")
-  var.put.nc(nc, "lat", v_lat$latitude)
+    var.put.nc(nc, "lat", v_lat$latitude)
 
   var.def.nc(nc, "lon", "NC_DOUBLE", "profile")
     att.put.nc(nc, "lon", "standard_name", "NC_CHAR", "longitude")
@@ -260,7 +271,7 @@ write.ctd.netcdf <- function(session){
     att.put.nc(nc, "lon", "valid_max", "NC_FLOAT", 180)
     att.put.nc(nc, "lon", "grid_mapping", "NC_CHAR", "crs")
     att.put.nc(nc, "lon", "comment", "NC_CHAR", "position is recorded during deployment and verified against satelite telemetry")
-  var.put.nc(nc, "lon", v_lon$longitude)
+    var.put.nc(nc, "lon", v_lon$longitude)
 
   var.def.nc(nc, "crs", "NC_INT", NA) # WGS84
     att.put.nc(nc, "crs", "grid_mapping_name", "NC_CHAR", "latitude_longitude")
@@ -269,19 +280,26 @@ write.ctd.netcdf <- function(session){
     att.put.nc(nc, "crs", "semi_major_axis", "NC_DOUBLE", 6378137.0)
     att.put.nc(nc, "crs", "inverse_flattening", "NC_DOUBLE", 298.257223563)
 
+  for(var in sensor_metadata$variable){
     # data
-  var.def.nc(nc, "temperature", "NC_DOUBLE", c("pressure", "profile"))
-    att.put.nc(nc, "temperature", "long_name", "NC_CHAR", "Water temperature, IPTS-90" )
-    att.put.nc(nc, "temperature", "standard_name", "NC_CHAR", "sea_water_temperature" )
-    att.put.nc(nc, "temperature", "units", "NC_CHAR", "degree_Celsius" )
-    att.put.nc(nc, "temperature", "_FillValue", "NC_DOUBLE", -99999 )
-    att.put.nc(nc, "temperature", "valid_min", "NC_DOUBLE", -2.5 )
-    att.put.nc(nc, "temperature", "valid_max", "NC_DOUBLE", 45 )
-    att.put.nc(nc, "temperature", "coordinates", "NC_CHAR", "time lat lon pressure" )
-    att.put.nc(nc, "temperature", "instrument", "NC_CHAR", "instrument_temp" )
-    att.put.nc(nc, "temperature", "grid_mapping", "NC_CHAR", "crs" )
-    att.put.nc(nc, "temperature", "coverage_content_type", "NC_CHAR", "physicalMeasurement" )
-  var.put.nc(nc, "temperature", v_temp)
+  metadata = sensor_metadata[variable == var]
+    # covert to array for netcdf
+  v_ = sb[,c("pressure", "station", metadata$parameter), with=F]
+  v_ = reshape2::acast(v_, pressure ~ station)
+
+    var.def.nc(nc, var, "NC_DOUBLE", c("pressure", "profile"))
+      att.put.nc(nc, var, "long_name", "NC_CHAR", metadata$long_name)
+      att.put.nc(nc, var, "standard_name", "NC_CHAR", metadata$standard_name)
+      att.put.nc(nc, var, "units", "NC_CHAR", metadata$units)
+      att.put.nc(nc, var, "_FillValue", "NC_DOUBLE", as.numeric(metadata$`_fillValue`))
+      att.put.nc(nc, var, "valid_min", "NC_DOUBLE", as.numeric(metadata$valid_min))
+      att.put.nc(nc, var, "valid_max", "NC_DOUBLE", as.numeric(metadata$valid_max))
+      att.put.nc(nc, var, "coordinates", "NC_CHAR", "time lat lon pressure" )
+      att.put.nc(nc, var, "instrument", "NC_CHAR", metadata$instid)
+      att.put.nc(nc, var, "grid_mapping", "NC_CHAR", "crs" )
+      att.put.nc(nc, var, "coverage_content_type", "NC_CHAR", "physicalMeasurement" )
+    var.put.nc(nc, var, v_)
+  }
 
   for(g in names(session$global_metadata)){
     att.put.nc(nc, "NC_GLOBAL", g, "NC_CHAR", session$global_metadata[[g]])
@@ -294,4 +312,3 @@ write.ctd.netcdf <- function(session){
   sync.nc(nc)
   close.nc(nc)
 }
-
