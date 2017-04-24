@@ -27,12 +27,11 @@ shinyServer(function(input, output, session) {
     dir = parseDirPath(volumes, input$directory)
     d = list()
     m = list()
-    extraParams = list(columndepth=list(name="sfdSM", unit="m", scale=""))
     withProgress(message = 'loading files...', value = 0, {
       for(i in filelist){
         # Increment the progress bar, and update the detail text.
         incProgress(1/length(filelist), detail = paste("loading", i))
-        d[[i]] = read.ctd.sbe(paste0(dir,"/",i), columns=extraParams)
+        d[[i]] = read.ctd.sbe(paste0(dir,"/",i))
         m[[i]] = parse_sbe_xml(d[[i]])
       }
     })
