@@ -100,7 +100,9 @@ shinyServer(function(input, output, session) {
     load(paste0(dir, "/CTDQC.rdata"))
       # copy data from loaded .rdata file to correct slots
     profiles$data = session$data
+    profiles$metadata = session$metadata
     profiles$original = session$original
+    profiles$untrimmed = session$untrimmed
     profiles$positions = session$positions
     profiles$bottles = session$bottles
     profiles$global_metadata = session$global_metadata
@@ -270,6 +272,7 @@ shinyServer(function(input, output, session) {
     session$original = profiles$original
     session$positions = profiles$positions
     session$global_metadata = profiles$global_metadata
+    session$metadata = profiles$metadata
     if(!is.null(profiles$bottles)){
       session$bottles = profiles$bottles
     }
