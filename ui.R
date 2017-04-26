@@ -63,7 +63,7 @@ shinyUI(fluidPage(
                    column(4, selectInput("x1", "Primary (Blue) X axis", choices = NULL)),
                    column(4, selectInput("x2", "Secondary (Red) X axis", choices = NULL))
                  ),
-                 plotOutput("profile_plot", brush = brushOpts("flag_brush", direction = "y"), height="800px"),
+                 plotOutput("profile_plot", brush = brushOpts("flag_brush", direction = "xy"), height="800px"),
                  h6("Flags and factors are applied to the primary axis only"),
                  h4("Flag"),
                  actionButton('apply_flag', "Apply Flag", icon=icon("flag")),

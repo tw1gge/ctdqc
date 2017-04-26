@@ -135,12 +135,16 @@ shinyServer(function(input, output, session) {
   observeEvent(input$apply_flag,{
       # find the range of y to flag x on, based on plot brush
     y_select = round(c(input$flag_brush$ymin, input$flag_brush$ymax), 3)
+    x_select = round(c(input$flag_brush$xmin, input$flag_brush$xmax), 3)
       # extract the y variable
     y = profiles$data[[input$select_profile]]@data[[input$y]]
+    x = profiles$data[[input$select_profile]]@data[[input$x1]]
       # replace with NA sections of x which match the selected y
-    profiles$data[[input$select_profile]]@data[[input$x1]][y %between% y_select] = NA
+    profiles$data[[input$select_profile]]@data[[input$x1]][y %between% y_select & x %between% x_select] = NA
       # write details to ctd log
-    log = paste("flag applied to", input$x1, "for", input$y, "between", y_select[1], "and", y_select[2])
+    log = paste("flag applied to", input$x1, "for",
+                input$y, "between", y_select[1], "-", y_select[2],
+                "and", input$x1, "between", x_select[1], "-", x_select[2])
     processingLog(profiles$data[[input$select_profile]]) = log
   })
 
