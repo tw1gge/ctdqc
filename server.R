@@ -233,15 +233,19 @@ shinyServer(function(input, output, session) {
 
   observeEvent(input$licor, {
     licor_par = par_from_voltage(
-        profiles$data[[input$select_profile]]@data[[input$par_channel]],
+        profiles$untrimmed[[input$select_profile]]@data[[input$par_channel]],
         input$licor_factor, input$licor_offset)
 
     # add to untrimmed
     profiles$untrimmed[[input$select_profile]] = oceSetData(profiles$untrimmed[[input$select_profile]],
                                                          "par", licor_par,
                                                          units = list(unit=expression(umol~s-1~m-2), scale = "PAR/Irradiance, Cefas Licor PAR"))
+    # now subset and add to data
+    x = subset(profiles$untrimmed[[input$select_profile]],
+               scan >= min(profiles$data[[input$select_profile]][["scan"]]) &
+               scan <= max(profiles$data[[input$select_profile]][["scan"]]))
     profiles$data[[input$select_profile]] = oceSetData(profiles$data[[input$select_profile]],
-                                                         "par", licor_par,
+                                                         "par", x[["par"]],
                                                          units = list(unit=expression(umol~s-1~m-2), scale = "PAR/Irradiance, Cefas Licor PAR"))
     processingLog(profiles$data[[input$select_profile]]) = paste("PAR processed with factor =", input$licor_factor, ",offset =", input$licor_offset)
   })
@@ -441,9 +445,13 @@ shinyServer(function(input, output, session) {
   output$progress = renderTable({
     # fetch processing log then grep for string to check progress
     log = lapply(profiles$data , function(x) `@`( x , processingLog))
+    sensor = grepl("oceSetData", log, ignore.case=T)
+    trim = grepl("ctdTrim", log, ignore.case=T)
     done = grepl("complete", log, ignore.case=T)
     data.frame(
       "dip" = names(profiles$data),
+      "trim" = trim,
+      "sensor" = sensor,
       "done" = done
       )
   })
