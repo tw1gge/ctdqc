@@ -299,7 +299,8 @@ write.ctd.netcdf <- function(session, sensor_metadata){
     var.def.nc(nc, metadata$instid, "NC_BYTE", "profile")
       att.put.nc(nc, metadata$instid, "long_name", "NC_CHAR", metadata$sensor_name)
       att.put.nc(nc, metadata$instid, "nodc_name", "NC_CHAR", metadata$sensor_nodc)
-      att.put.nc(nc, metadata$instid, "make_model", "NC_CHAR", metadata$sensor_make )
+      att.put.nc(nc, metadata$instid, "make_model", "NC_CHAR", metadata$sensor_make)
+      att.put.nc(nc, metadata$instid, "serial_number", "NC_CHAR", as.character(metadata$serial))
       att.put.nc(nc, metadata$instid, "precision", "NC_CHAR", as.character(metadata$precision))
   }
 
