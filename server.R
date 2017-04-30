@@ -160,8 +160,12 @@ shinyServer(function(input, output, session) {
     })
   })
 
-  observeEvent(input$mark_complete,{
-    processingLog(profiles$data[[input$select_profile]]) = paste("QC Complete")
+  observeEvent(input$mark_complete_QC2,{
+    processingLog(profiles$data[[input$select_profile]]) = paste("Manual (QC2) Complete")
+  })
+
+  observeEvent(input$mark_complete_all,{
+    processingLog(profiles$data[[input$select_profile]]) = paste("All QC Complete")
   })
 
   ## SENSORS
@@ -460,11 +464,13 @@ shinyServer(function(input, output, session) {
     log = lapply(profiles$data , function(x) `@`( x , processingLog))
     sensor = grepl("oceSetData", log, ignore.case=T)
     trim = grepl("ctdTrim", log, ignore.case=T)
-    done = grepl("complete", log, ignore.case=T)
+    QC2 = grepl("QC2", log, ignore.case=T)
+    done = grepl("QC Complete", log, ignore.case=T)
     data.frame(
       "dip" = names(profiles$data),
       "trim" = trim,
       "sensor" = sensor,
+      "QC2" = QC2,
       "done" = done
       )
   })
