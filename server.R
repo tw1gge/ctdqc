@@ -149,12 +149,15 @@ shinyServer(function(input, output, session) {
   })
 
   observeEvent(input$apply_factor,{
-    raw = profiles$data[[input$select_profile]]@data[[input$x1]]
-    mod = (raw * input$factor) + input$offset
-    profiles$data[[input$select_profile]]@data[[input$x1]] = mod
-    processingLog(profiles$data[[input$select_profile]]) = paste(input$x1,
-                                                                 ",adjusted with factor", input$factor,
-                                                                 ", offset", input$offset)
+    # lapply though and apply to all dips
+    session$data = lapply(session$data, function(x) {
+      raw = x@data[[input$x1]]
+      mod = (raw * input$factor) + input$offset
+      x@data[[input$x1]] = mod
+      log = paste(input$x1, ",adjusted with factor", input$factor, ", offset", input$offset)
+      processingLog(x) = log
+      return(x)
+    })
   })
 
   observeEvent(input$mark_complete,{
@@ -414,7 +417,7 @@ shinyServer(function(input, output, session) {
     }
   })
   output$bottle_plot = renderPlot({
-    if(input$Plot_bottle_select == "Salinity"){
+    if(input$Plot_bottle_select == "salinity"){
       dat = hot_to_r(input$bottles)[bottle_sal != 0]
       m = lm(data = dat, salinity ~ bottle_sal)
       par(mfrow = c(1, 2))
