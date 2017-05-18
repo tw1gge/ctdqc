@@ -246,15 +246,16 @@ shinyServer(function(input, output, session) {
     # add to untrimmed
     profiles$untrimmed[[input$select_profile]] = oceSetData(profiles$untrimmed[[input$select_profile]],
                                                          "par", licor_par,
-                                                         units = list(unit=expression(umol~s-1~m-2), scale = "PAR/Irradiance, Cefas Licor PAR"))
+                                                         unit = list(unit=expression(umol~s-1~m-2), scale = "PAR/Irradiance, Cefas Licor PAR"))
     # now subset and add to data
     x = subset(profiles$untrimmed[[input$select_profile]],
                scan >= min(profiles$data[[input$select_profile]][["scan"]]) &
                scan <= max(profiles$data[[input$select_profile]][["scan"]]))
+    log = paste("PAR processed with factor =", input$licor_factor, ",offset =", input$licor_offset)
     profiles$data[[input$select_profile]] = oceSetData(profiles$data[[input$select_profile]],
-                                                         "par", x[["par"]],
-                                                         units = list(unit=expression(umol~s-1~m-2), scale = "PAR/Irradiance, Cefas Licor PAR"))
-    processingLog(profiles$data[[input$select_profile]]) = paste("PAR processed with factor =", input$licor_factor, ",offset =", input$licor_offset)
+                                                       "par", x[["par"]],
+                                                       unit = list(unit=expression(umol~s-1~m-2), scale = "PAR/Irradiance, Cefas Licor PAR"),
+                                                       note = log)
   })
 
   observeEvent(input$flag_flu, {
@@ -462,7 +463,7 @@ shinyServer(function(input, output, session) {
   output$progress = renderTable({
     # fetch processing log then grep for string to check progress
     log = lapply(profiles$data , function(x) `@`( x , processingLog))
-    sensor = grepl("oceSetData", log, ignore.case=T)
+    sensor = grepl("processed", log, ignore.case=T)
     trim = grepl("ctdTrim", log, ignore.case=T)
     QC2 = grepl("QC2", log, ignore.case=T)
     done = grepl("QC Complete", log, ignore.case=T)
