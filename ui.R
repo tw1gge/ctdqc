@@ -111,7 +111,8 @@ shinyUI(fluidPage(
                    ),
                    numericInput('licor_factor', label = "Licor factor", value = 0.22345679),
                    numericInput('licor_offset', label = "Licor offset", value = 3.3737),
-                   actionButton('licor', "Process Licor PAR", icon=icon("beer"))
+                   actionButton('licor', "Process Licor PAR", icon=icon("beer")),
+                   actionButton('flag_par', "Flag all PAR (Night)", icon=icon("moon-o"))
                  ),
                  inputPanel(
                    h4("Flurometer"),

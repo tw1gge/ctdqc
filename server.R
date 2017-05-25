@@ -258,6 +258,18 @@ shinyServer(function(input, output, session) {
                                                        note = log)
   })
 
+  observeEvent(input$flag_par, {
+    if("par" %in% names(profiles$data[[input$select_profile]]@data)){
+      profiles$data[[input$select_profile]][["par"]] = NA
+      log = paste("All PAR removed (Night)")
+      processingLog(profiles$data[[input$select_profile]]) = log
+    }
+    else{
+      warning("PAR has not been calculated")
+    }
+  })
+
+
   observeEvent(input$flag_flu, {
     if("par" %in% names(profiles$data[[input$select_profile]]@data)){
       profiles$data[[input$select_profile]][["fluorescence"]] [profiles$data[[input$select_profile]][["par"]] > input$par_flu_threshold] = NA
