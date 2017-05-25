@@ -7,7 +7,7 @@ library(rhandsontable, quietly=T)
 library(xml2, quietly=T)
 
 source("functions.R", local = T)
-CTDQC_version = "1.2.1"
+CTDQC_version = "1.3"
 editable_metadata = c("id", "title", "summary", "processing_level", "comment", "acknowledgment", "licence", "project", "creator", "creator_email")
 sensor_metadata = fread("sensor_table.csv")
 
@@ -401,7 +401,7 @@ shinyServer(function(input, output, session) {
               zoom = 7)
   })
   output$datatable = renderDataTable({
-    data.frame(profiles$data[[input$select_profile]]@data)
+    data.frame(profiles$untrimmed[[input$select_profile]]@data)
   })
   output$bottles = renderRHandsontable({
       # editable table
