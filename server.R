@@ -124,6 +124,19 @@ shinyServer(function(input, output, session) {
     profiles$data[[input$select_profile]] = ctdTrim(profiles$data[[input$select_profile]], parameters = list(pmin=1))
   })
 
+  observeEvent(input$remove_pressure_inversions,{
+    # calculates smoothed decent rate from pressure (as per SBE data processing)
+    prs = profiles$data[[input$select_profile]]@data[["pressure"]]
+    decent_diff = c(0, diff(prs))
+    decent_calc = zoo::rollmean(decent_diff, 48, fill=NA, align="right")*24
+
+    profiles$data[[input$select_profile]]@data = lapply(profiles$data[[input$select_profile]]@data, function(x) {
+      x[decent_calc < input$decent_threshold] = NA
+      return(x)
+    })
+    processingLog(profiles$data[[input$select_profile]]) = paste("Pressure inversions removed, minimum speed = ", input$decent_threshold,"m/s")
+  })
+
   observeEvent(input$decimate,{
     profiles$data = lapply(profiles$data, ctdDecimate, p=input$bin_size)
   })
@@ -191,8 +204,8 @@ shinyServer(function(input, output, session) {
                                                          unit = list(name = expression(mmol~m-3), scale="Optode"))
     # now subset and apply to $data, don't write subset to log
     x = subset(profiles$untrimmed[[input$select_profile]],
-               scan >= min(profiles$data[[input$select_profile]][["scan"]]) &
-               scan <= max(profiles$data[[input$select_profile]][["scan"]]))
+               scan >= min(profiles$data[[input$select_profile]][["scan"]], na.rm=T) &
+               scan <= max(profiles$data[[input$select_profile]][["scan"]], na.rm=T))
     profiles$data[[input$select_profile]] = ctdAddColumn(profiles$data[[input$select_profile]],
                                                          x[["temperature_optode"]], "temperature_optode", label = "temperature",
                                                          unit = list(name=expression(degree*C), scale="Optode"))
@@ -225,8 +238,8 @@ shinyServer(function(input, output, session) {
                                                          unit = list(name = expression(mmol~m-3), scale="RINKO"))
     # now subset and apply to $data, don't write subset to log
     x = subset(profiles$untrimmed[[input$select_profile]],
-               scan >= min(profiles$data[[input$select_profile]][["scan"]]) &
-               scan <= max(profiles$data[[input$select_profile]][["scan"]]))
+               scan >= min(profiles$data[[input$select_profile]][["scan"]], na.rm=T) &
+               scan <= max(profiles$data[[input$select_profile]][["scan"]], na.rm=T))
     profiles$data[[input$select_profile]] = ctdAddColumn(profiles$data[[input$select_profile]],
                                                          x[["temperature_RINKO"]], "temperature_RINKO", label = "temperature",
                                                          unit = list(name=expression(degree*C), scale="RINKO"))
@@ -249,8 +262,8 @@ shinyServer(function(input, output, session) {
                                                          unit = list(unit=expression(umol~s-1~m-2), scale = "PAR/Irradiance, Cefas Licor PAR"))
     # now subset and add to data
     x = subset(profiles$untrimmed[[input$select_profile]],
-               scan >= min(profiles$data[[input$select_profile]][["scan"]]) &
-               scan <= max(profiles$data[[input$select_profile]][["scan"]]))
+               scan >= min(profiles$data[[input$select_profile]][["scan"]], na.rm=T) &
+               scan <= max(profiles$data[[input$select_profile]][["scan"]], na.rm=T))
     log = paste("PAR processed with factor =", input$licor_factor, ",offset =", input$licor_offset)
     profiles$data[[input$select_profile]] = oceSetData(profiles$data[[input$select_profile]],
                                                        "par", x[["par"]],
@@ -389,7 +402,7 @@ shinyServer(function(input, output, session) {
         x1 = profiles$data[[input$select_profile]]@data[[input$x1]]
         x2 = profiles$data[[input$select_profile]]@data[[input$x2]]
         y = profiles$data[[input$select_profile]]@data[[input$y]]
-        ylim = rev(range(y))
+        ylim = rev(range(y, na.rm=T))
         plot(x = x2, y = y, type = "l", ylim = ylim, xlab = input$x2, ylab = input$y, col = "red")
         par(new = T)
         plot(x = x1, y = y, type = "l", ylim = ylim, axes = F, xlab = NA, ylab = NA, col = "blue")
