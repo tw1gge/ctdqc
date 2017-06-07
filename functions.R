@@ -9,9 +9,11 @@ optode_coefs = read.csv("optode_coefs.csv")
 optode.analogtemp <- function(v){
   return( ((v * 45) / 5) - 5 )
 }
+
 optode.analogDphase <- function(v){
   return( 10 + (v / 5) * 60 )
 }
+
 optode.phaseCalc <- function(DPhase, Temp, coefs){
   # for mkl optodes 3830 & 3835
     with(coefs, {
@@ -24,6 +26,7 @@ optode.phaseCalc <- function(DPhase, Temp, coefs){
       DPhase^4
     })
 }
+
 optode.correction <- function(O2, t, S, depth = 0, optode_salinity = 0){
   # corrects optode measurements for salinity and depth
     # oxygen units returned same as input
@@ -48,12 +51,14 @@ optode.correction <- function(O2, t, S, depth = 0, optode_salinity = 0){
 par_from_voltage <- function(x, factor, offset){
     return(factor * exp(offset * x))
 }
+
 rinko_temp <- function(V, tC = list(A = -5.326887e+00, B = +1.663288e+01, C = -2.123968e+00, D = +4.543014e-01)){
     # RINKO III defaults to #0263 ARO-CAV
 
   temp = tC$A + tC$B * V + tC$C * V^2 + tC$D * V^3
   return(temp)
 }
+
 rinko_o2 <- function(V, t, S, oC = list(A = -4.234162e+01,
                                      B = +1.276475e+02,
                                      C = -3.677435e-01,
@@ -187,6 +192,8 @@ write.ctd.netcdf <- function(session, sensor_metadata){
   require(RNetCDF)
   require(uuid)
   require(reshape2)
+  # load("C:/CEND_22_16/CTDQC.rdata")
+  # sensor_metadata = fread("sensor_table.csv")
 
   # validates that all QC steps are done
   log = rbindlist(lapply(session$data , function(x) as.data.frame(`@`( x , processingLog))), idcol=T)
@@ -246,7 +253,7 @@ write.ctd.netcdf <- function(session, sensor_metadata){
     att.put.nc(nc, "time", "calendar", "NC_CHAR", "gregorian") # note POSIXct assumes gregorian calendar
     att.put.nc(nc, "time", "axis", "NC_CHAR", "T")
     att.put.nc(nc, "time", "_FillValue", "NC_DOUBLE", -99999)
-    att.put.nc(nc, "time", "comment", "NC_CHAR", "Time taken from ESM2 RTC, time signifies start of burst measurement period")
+    att.put.nc(nc, "time", "comment", "NC_CHAR", "Time from ship GPS")
     var.put.nc(nc, "time", as.numeric(v_time$startTime))
 
   var.def.nc(nc, "lat", "NC_DOUBLE", "profile")
@@ -256,7 +263,7 @@ write.ctd.netcdf <- function(session, sensor_metadata){
     att.put.nc(nc, "lat", "valid_min", "NC_FLOAT", -90)
     att.put.nc(nc, "lat", "valid_max", "NC_FLOAT", 90)
     att.put.nc(nc, "lat", "grid_mapping", "NC_CHAR", "crs")
-    att.put.nc(nc, "lat", "comment", "NC_CHAR", "position is recorded during deployment and verified against satelite telemetry")
+    att.put.nc(nc, "lat", "comment", "NC_CHAR", "Position from ship GPS")
     var.put.nc(nc, "lat", v_lat$latitude)
 
   var.def.nc(nc, "lon", "NC_DOUBLE", "profile")
@@ -266,7 +273,7 @@ write.ctd.netcdf <- function(session, sensor_metadata){
     att.put.nc(nc, "lon", "valid_min", "NC_FLOAT", -180)
     att.put.nc(nc, "lon", "valid_max", "NC_FLOAT", 180)
     att.put.nc(nc, "lon", "grid_mapping", "NC_CHAR", "crs")
-    att.put.nc(nc, "lon", "comment", "NC_CHAR", "position is recorded during deployment and verified against satelite telemetry")
+    att.put.nc(nc, "lon", "comment", "NC_CHAR", "Position from ship GPS")
     var.put.nc(nc, "lon", v_lon$longitude)
 
   var.def.nc(nc, "crs", "NC_INT", NA) # WGS84
@@ -277,11 +284,11 @@ write.ctd.netcdf <- function(session, sensor_metadata){
     att.put.nc(nc, "crs", "inverse_flattening", "NC_DOUBLE", 298.257223563)
 
   for(var in sensor_metadata$variable){
-    # data
-  metadata = sensor_metadata[variable == var]
-    # covert to array for netcdf
-  v_ = sb[,c("pressure", "station", metadata$parameter), with=F]
-  v_ = reshape2::acast(v_, pressure ~ station)
+      # data
+    metadata = sensor_metadata[variable == var]
+      # covert to array for netcdf
+    v_ = sb[,c("pressure", "station", metadata$parameter), with=F]
+    v_ = reshape2::acast(v_, pressure ~ station)
 
     var.def.nc(nc, var, "NC_DOUBLE", c("pressure", "profile"))
       att.put.nc(nc, var, "long_name", "NC_CHAR", metadata$long_name)
