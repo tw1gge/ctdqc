@@ -1,12 +1,15 @@
-library(shiny)
-library(shinyFiles)
-library(oce)
-library(data.table)
-library(leaflet)
-library(rhandsontable)
+library(shiny,quietly=T)
+library(shinyFiles,quietly=T)
+library(oce, quietly=T)
+library(data.table, quietly=T)
+library(leaflet, quietly=T)
+library(rhandsontable, quietly=T)
+library(xml2, quietly=T)
 
 source("functions.R", local = T)
-CTDQC_version = 1.0
+CTDQC_version = "1.3"
+editable_metadata = c("id", "title", "summary", "processing_level", "comment", "acknowledgment", "licence", "project", "creator", "creator_email")
+sensor_metadata = fread("sensor_table.csv")
 
 shinyServer(function(input, output, session) {
 
@@ -14,34 +17,44 @@ shinyServer(function(input, output, session) {
   volumes = getVolumesFast()
   shinyDirChoose(input, 'directory', roots=volumes, session=session, restrictions=system.file(package='base'))
   output$directory = renderText({paste0(parseDirPath(volumes, input$directory), "/")})
-
   # make dynamic file list for storing the CTD objects, a list of S4 objects
   profiles = reactiveValues(data = NULL, bottles = NA)
-
    ## read data
   observeEvent(input$read_files, {
+    if(is.null(input$directory)){ return(NULL) } # stop crashing when you missclick
     filelist = list.files(parseDirPath(volumes, input$directory), full.names = F, pattern = "*.cnv")
     dir = parseDirPath(volumes, input$directory)
     d = list()
+    m = list()
     withProgress(message = 'loading files...', value = 0, {
       for(i in filelist){
         # Increment the progress bar, and update the detail text.
         incProgress(1/length(filelist), detail = paste("loading", i))
         d[[i]] = read.ctd.sbe(paste0(dir,"/",i))
+        m[[i]] = parse_sbe_xml(d[[i]])
       }
     })
+      # check if filter has been applied
+    headers = extract.metadata(d, "header")
+    filtered = stringr::str_count(headers, "filter_low_pass")
       # insert data into data slot
     profiles$data = d
+    profiles$metadata = m
     profiles$untrimmed = d
       # make a backup for use by revert
     profiles$original = d
       # make a summary of the positions for the map
     profiles$positions = extract.metadata(profiles$data, c("filename", "startTime", "station", "longitude", "latitude", "cruise"))
-    if(length(unique(profiles$positions$cruise)) > 1){warning("Cruise ID differ between cnv files!")}
+    profiles$global_metadata = netcdf.metadata(profiles$data, profiles$positions)
+    profiles$global_metadata_default = profiles$global_metadata
+    if(length(unique(profiles$positions$cruise)) > 1){warning("WARNING - Cruise ID differ between cnv files!")}
+    if(filtered < length(d)){warning("WARNING - pressure filter has not been applied for all profiles!") }
+    if(length(unique(m)) != 1){ warning("WARNING - xml header differs between files") }
   })
 
   observeEvent(input$read_bottle, {
       # make two file lists for comparison
+    if(is.null(input$directory) | is.null(profiles$data)){ return(NULL) } # stop crashing when you missclick
     filelist = list.files(parseDirPath(volumes, input$directory), full.names = F, pattern = "*.cnv")
     bottlelist = list.files(parseDirPath(volumes, input$directory), full.names = F, pattern = "*.bl")
     dir = parseDirPath(volumes, input$directory)
@@ -82,9 +95,13 @@ shinyServer(function(input, output, session) {
     load(paste0(dir, "/CTDQC.rdata"))
       # copy data from loaded .rdata file to correct slots
     profiles$data = session$data
+    profiles$metadata = session$metadata
     profiles$original = session$original
+    profiles$untrimmed = session$untrimmed
     profiles$positions = session$positions
     profiles$bottles = session$bottles
+    profiles$global_metadata = session$global_metadata
+    profiles$global_metadata_default = profiles$global_metadata
   })
 
   ## Processes
@@ -92,16 +109,31 @@ shinyServer(function(input, output, session) {
   observeEvent(input$pumped,{
     profiles$data[[input$select_profile]] = subset(profiles$data[[input$select_profile]], pumpStatus == 1)
   })
+
   observeEvent(input$trim,{
     profiles$data[[input$select_profile]] = ctdTrim(profiles$data[[input$select_profile]],
                                                     method = "scan", parameters = round(c(input$scan_brush$xmin, input$scan_brush$xmax)))
   })
+
   observeEvent(input$autotrim,{
     profiles$data[[input$select_profile]] = ctdTrim(profiles$data[[input$select_profile]], parameters = list(pmin=1))
   })
 
+  observeEvent(input$remove_pressure_inversions,{
+    # calculates smoothed decent rate from pressure (as per SBE data processing)
+    prs = profiles$data[[input$select_profile]]@data[["pressure"]]
+    decent_diff = c(0, diff(prs))
+    decent_calc = zoo::rollmean(decent_diff, 48, fill=NA, align="right")*24
+
+    profiles$data[[input$select_profile]]@data = lapply(profiles$data[[input$select_profile]]@data, function(x) {
+      x[decent_calc < input$decent_threshold] = NA
+      return(x)
+    })
+    processingLog(profiles$data[[input$select_profile]]) = paste("Pressure inversions removed, minimum speed = ", input$decent_threshold,"m/s")
+  })
+
   observeEvent(input$decimate,{
-    profiles$data[[input$select_profile]] = ctdDecimate(profiles$data[[input$select_profile]], p = input$bin_size)
+    profiles$data = lapply(profiles$data, ctdDecimate, p=input$bin_size)
   })
 
   observeEvent(input$revert,{
@@ -109,20 +141,40 @@ shinyServer(function(input, output, session) {
   })
 
   observeEvent(input$apply_flag,{
-    warning("not implemented")
+      # find the range of y to flag x on, based on plot brush
+    y_select = round(c(input$flag_brush$ymin, input$flag_brush$ymax), 3)
+    x_select = round(c(input$flag_brush$xmin, input$flag_brush$xmax), 3)
+      # extract the y variable
+    y = profiles$data[[input$select_profile]]@data[[input$y]]
+    x = profiles$data[[input$select_profile]]@data[[input$x1]]
+    profiles$state$input_x1 = input$x1
+      # replace with NA sections of x which match the selected y
+    profiles$data[[input$select_profile]]@data[[input$x1]][y %between% y_select & x %between% x_select] = NA
+      # write details to ctd log
+    log = paste("flag applied to", input$x1, "for",
+                input$y, "between", y_select[1], "-", y_select[2],
+                "and", input$x1, "between", x_select[1], "-", x_select[2])
+    processingLog(profiles$data[[input$select_profile]]) = log
   })
 
   observeEvent(input$apply_factor,{
-    raw = profiles$data[[input$select_profile]]@data[[input$x1]]
-    mod = (raw * input$factor) + input$offset
-    profiles$data[[input$select_profile]]@data[[input$x1]] = mod
-    processingLog(profiles$data[[input$select_profile]]) = paste(input$x1,
-                                                                 ",adjusted with factor", input$factor,
-                                                                 ", offset", input$offset)
+    # lapply though and apply to all dips
+    profiles$data = lapply(profiles$data, function(x) {
+      raw = x@data[[input$x1]]
+      mod = (raw * input$factor) + input$offset
+      x@data[[input$x1]] = mod
+      log = paste(input$x1, ",adjusted with factor", input$factor, ", offset", input$offset)
+      processingLog(x) = log
+      return(x)
+    })
   })
 
-  observeEvent(input$mark_complete,{
-    processingLog(profiles$data[[input$select_profile]]) = paste("QC Complete")
+  observeEvent(input$mark_complete_QC2,{
+    processingLog(profiles$data[[input$select_profile]]) = paste("Manual (QC2) Complete")
+  })
+
+  observeEvent(input$mark_complete_all,{
+    processingLog(profiles$data[[input$select_profile]]) = paste("All QC Complete")
   })
 
   ## SENSORS
@@ -148,8 +200,8 @@ shinyServer(function(input, output, session) {
                                                          unit = list(name = expression(mmol~m-3), scale="Optode"))
     # now subset and apply to $data, don't write subset to log
     x = subset(profiles$untrimmed[[input$select_profile]],
-               scan >= min(profiles$data[[input$select_profile]][["scan"]]) &
-               scan <= max(profiles$data[[input$select_profile]][["scan"]]))
+               scan >= min(profiles$data[[input$select_profile]][["scan"]], na.rm=T) &
+               scan <= max(profiles$data[[input$select_profile]][["scan"]], na.rm=T))
     profiles$data[[input$select_profile]] = ctdAddColumn(profiles$data[[input$select_profile]],
                                                          x[["temperature_optode"]], "temperature_optode", label = "temperature",
                                                          unit = list(name=expression(degree*C), scale="Optode"))
@@ -182,8 +234,8 @@ shinyServer(function(input, output, session) {
                                                          unit = list(name = expression(mmol~m-3), scale="RINKO"))
     # now subset and apply to $data, don't write subset to log
     x = subset(profiles$untrimmed[[input$select_profile]],
-               scan >= min(profiles$data[[input$select_profile]][["scan"]]) &
-               scan <= max(profiles$data[[input$select_profile]][["scan"]]))
+               scan >= min(profiles$data[[input$select_profile]][["scan"]], na.rm=T) &
+               scan <= max(profiles$data[[input$select_profile]][["scan"]], na.rm=T))
     profiles$data[[input$select_profile]] = ctdAddColumn(profiles$data[[input$select_profile]],
                                                          x[["temperature_RINKO"]], "temperature_RINKO", label = "temperature",
                                                          unit = list(name=expression(degree*C), scale="RINKO"))
@@ -197,13 +249,54 @@ shinyServer(function(input, output, session) {
 
   observeEvent(input$licor, {
     licor_par = par_from_voltage(
-        profiles$data[[input$select_profile]]@data[[input$par_channel]],
+        profiles$untrimmed[[input$select_profile]]@data[[input$par_channel]],
         input$licor_factor, input$licor_offset)
 
-    profiles$data[[input$select_profile]] = ctdAddColumn(profiles$data[[input$select_profile]],
-                                                         licor_par, "par", label = "par",
-                                                         unit = list(name = expression(uE), scale = "PAR/Irradiance, Cefas Licor PAR"))
-    processingLog(profiles$data[[input$select_profile]]) = paste("PAR processed with factor =", input$licor_factor, ",offset =", input$licor_offset)
+    # add to untrimmed
+    profiles$untrimmed[[input$select_profile]] = oceSetData(profiles$untrimmed[[input$select_profile]],
+                                                         "par", licor_par,
+                                                         unit = list(unit=expression(umol~s-1~m-2), scale = "PAR/Irradiance, Cefas Licor PAR"))
+    # now subset and add to data
+    x = subset(profiles$untrimmed[[input$select_profile]],
+               scan >= min(profiles$data[[input$select_profile]][["scan"]], na.rm=T) &
+               scan <= max(profiles$data[[input$select_profile]][["scan"]], na.rm=T))
+    log = paste("PAR processed with factor =", input$licor_factor, ",offset =", input$licor_offset)
+    profiles$data[[input$select_profile]] = oceSetData(profiles$data[[input$select_profile]],
+                                                       "par", x[["par"]],
+                                                       unit = list(unit=expression(umol~s-1~m-2), scale = "PAR/Irradiance, Cefas Licor PAR"),
+                                                       note = log)
+  })
+
+  observeEvent(input$flag_par, {
+    if("par" %in% names(profiles$data[[input$select_profile]]@data)){
+      profiles$data[[input$select_profile]][["par"]] = NA
+      log = paste("All PAR removed (Night)")
+      processingLog(profiles$data[[input$select_profile]]) = log
+    }
+    else{
+      warning("PAR has not been calculated")
+    }
+  })
+
+
+  observeEvent(input$flag_flu, {
+    if("par" %in% names(profiles$data[[input$select_profile]]@data)){
+      profiles$data[[input$select_profile]][["fluorescence"]] [profiles$data[[input$select_profile]][["par"]] > input$par_flu_threshold] = NA
+      profiles$untrimmed[[input$select_profile]][["fluorescence"]] [profiles$untrimmed[[input$select_profile]][["par"]] > input$par_flu_threshold] = NA
+      log = paste("fluorometry values where PAR >", input$par_flu_threshold, " have been flagged")
+      processingLog(profiles$data[[input$select_profile]]) = log
+    }
+    else{
+      warning("PAR has not been calculated")
+    }
+  })
+
+  observeEvent(input$secondCT, {
+    profiles$data[[input$select_profile]][["temperature"]] = profiles$data[[input$select_profile]][["temperature2"]]
+    profiles$data[[input$select_profile]][["conductivity"]] = profiles$data[[input$select_profile]][["conductivity2"]]
+    profiles$data[[input$select_profile]][["salinity"]] = profiles$data[[input$select_profile]][["salinity2"]]
+    profiles$data[[input$select_profile]][["salinityDifference"]] = 0
+    processingLog(profiles$data[[input$select_profile]]) = paste("Primary CT data replaced with that from secondary")
   })
 
   ## Write out
@@ -215,7 +308,12 @@ shinyServer(function(input, output, session) {
     session$untrimmed = profiles$untrimmed
     session$original = profiles$original
     session$positions = profiles$positions
-    if(!is.na(profiles$bottles)){
+    session$global_metadata = profiles$global_metadata
+    session$metadata = profiles$metadata
+    if(!is.null(profiles$bottles)){
+      session$bottles = profiles$bottles
+    }
+    if(!is.null(input$bottles)){
       session$bottles = hot_to_r(input$bottles)
     }
     save(session, file = paste0(dir, "/CTDQC.rdata"))
@@ -230,6 +328,21 @@ shinyServer(function(input, output, session) {
       }
     })
   })
+
+  observeEvent(input$make_netcdf, {
+    sensor_metadata[variable == "temperature", serial := input$serial_temp]
+    sensor_metadata[variable == "conductivity", serial := input$serial_cond]
+    sensor_metadata[variable == "salinity", serial := input$serial_prs]
+    sensor_metadata[variable == "pressure", serial := input$serial_prs]
+    sensor_metadata[variable == "altimeter", serial := input$serial_alt]
+    sensor_metadata[variable == "turbidity", serial := input$serial_ftu]
+    sensor_metadata[variable == "fluorescence", serial := input$serial_flu]
+    sensor_metadata[variable == "oxygen_RINKO", serial := input$serial_rinko]
+    sensor_metadata[variable == "oxygen_optode", serial := input$serial_optode]
+    sensor_metadata[variable == "par", serial := input$serial_par]
+    write.ctd.netcdf(profiles, sensor_metadata)
+  })
+
 
   ## Ui and controls
     # update select input when filelist changes
@@ -256,20 +369,25 @@ shinyServer(function(input, output, session) {
 
   ## Output
 
-  output$summary <- renderPrint(
+  output$summary <- renderPrint({
     # workaround for oce function not liking null data
     if(!is.null(profiles$data[[input$select_profile]]))
     summary(profiles$data[[input$select_profile]])
-    )
-  output$xml <- renderPrint(
+    })
+  output$xml <- renderText({
     # workaround for oce function not liking null data
-      if(!is.null(profiles$data[[input$select_profile]])){
-        profiles$data[[input$select_profile]]@metadata["header"]
-      }
-    )
+    if(!is.null(profiles$data[[input$select_profile]])){
+      paste(profiles$data[[input$select_profile]]@metadata$header, collapse="\n")
+    }
+    })
   output$scan_plot = renderPlot({
-    # workaround for plot function not liking null data
-    if(!is.null(profiles$data[[input$select_profile]]))
+      # check if there is data, give warning if not
+    validate(need(!is.null(profiles$data[[input$select_profile]]), "Data not loaded"))
+    validate(
+      need(
+        any(grepl("filter_low_pass", profiles$data[[input$select_profile]]@metadata$header)),
+           "Pressure filter has not been applied for this profile")
+      )
     plotScan(profiles$data[[input$select_profile]])
     abline(v = input$trim_scans)
     })
@@ -280,7 +398,7 @@ shinyServer(function(input, output, session) {
         x1 = profiles$data[[input$select_profile]]@data[[input$x1]]
         x2 = profiles$data[[input$select_profile]]@data[[input$x2]]
         y = profiles$data[[input$select_profile]]@data[[input$y]]
-        ylim = rev(range(y))
+        ylim = rev(range(y, na.rm=T))
         plot(x = x2, y = y, type = "l", ylim = ylim, xlab = input$x2, ylab = input$y, col = "red")
         par(new = T)
         plot(x = x1, y = y, type = "l", ylim = ylim, axes = F, xlab = NA, ylab = NA, col = "blue")
@@ -293,7 +411,7 @@ shinyServer(function(input, output, session) {
     if(!is.null(profiles$data[[input$select_profile]]))
     plotTS(profiles$data[[input$select_profile]])
     })
-  output$map = renderLeaflet(
+  output$map = renderLeaflet({
     # workaround for oce function not liking null data
     if(!is.null(profiles$data[[input$select_profile]]))
     leaflet(profiles$positions) %>%
@@ -302,28 +420,19 @@ shinyServer(function(input, output, session) {
       setView(lat = profiles$data[[input$select_profile]]@metadata$latitude,
               lng = profiles$data[[input$select_profile]]@metadata$longitude,
               zoom = 7)
-  )
-  output$datatable = renderDataTable({
-    data.frame(profiles$data[[input$select_profile]]@data)
   })
-
+  output$datatable = renderDataTable({
+    data.frame(profiles$untrimmed[[input$select_profile]]@data)
+  })
   output$bottles = renderRHandsontable({
       # editable table
+    validate(need(profiles$bottles, "bottle file not loaded"))
     rhandsontable(profiles$bottles, readOnly = T, digits = 6, highlightRow = T) %>%
       hot_col(c("bottle_sal", "bottle_O2", "bottle_Chl"), readOnly = F) %>%
       hot_col(c("salinity", "salinity2", "bottle_sal"), format = "0.0000") %>%
       hot_context_menu(allowRowEdit = FALSE, allowColEdit = FALSE)
   })
-  output$bottle_plot = renderPlot({
-    if(input$Plot_bottle_select == "Salinity"){
-      dat = hot_to_r(input$bottles)[bottle_sal != 0]
-      plot(dat$bottle_sal, dat$salinity2,
-           col = "green", xlab = "Niskin", ylab = "CT", main = "CT vs Niskin, Blue = Primary CT")
-      points(dat$bottle_sal, dat$salinity, col = "blue")
-      m = lm(data = dat, salinity ~ bottle_sal)
-      abline(m)
-    }
-  })
+
   output$bottle_plot = renderPlot({
     if(input$Plot_bottle_select == "Salinity"){
       dat = hot_to_r(input$bottles)[bottle_sal != 0]
@@ -358,7 +467,19 @@ shinyServer(function(input, output, session) {
       hist(m$residuals, main = "Residuals")
       profiles$bottle_coef[["oxygen_RINKO"]] = list(var = "oxygen_RINKO", slope = coef(m)[2], intercept = coef(m)[1])
     }
+    if(input$Plot_bottle_select == "Chlorophyll"){
+      dat = hot_to_r(input$bottles)[bottle_O2 != 0]
+      m = lm(data = dat, fluorescence ~ bottle_Chl)
+      par(mfrow = c(1, 2))
+      plot(dat$bottle_Chl, dat$fluorescence,
+           col = "green", xlab = "Chlorophyll (mg/l)", ylab = "Fluorescence", main = "Seapoint Vs Chlorophyll",
+           sub = paste0("y = ", round(coef(m)[1], 3), " + ", round(coef(m)[2], 3),"x"))
+      abline(m)
+      hist(m$residuals, main = "Residuals")
+      profiles$bottle_coef[["fluorescence"]] = list(var = "fluorescence", slope = coef(m)[2], intercept = coef(m)[1])
+    }
   })
+
   output$bottle_coef = renderTable({
     print(rbindlist(profiles$bottle_coef))
     rbindlist(profiles$bottle_coef)
@@ -366,12 +487,37 @@ shinyServer(function(input, output, session) {
   output$progress = renderTable({
     # fetch processing log then grep for string to check progress
     log = lapply(profiles$data , function(x) `@`( x , processingLog))
-    done = grepl("complete", log, ignore.case=T)
+    sensor = grepl("processed", log, ignore.case=T)
+    trim = grepl("ctdTrim", log, ignore.case=T)
+    QC2 = grepl("QC2", log, ignore.case=T)
+    done = grepl("QC Complete", log, ignore.case=T)
     data.frame(
       "dip" = names(profiles$data),
+      "trim" = trim,
+      "sensor" = sensor,
+      "QC2" = QC2,
       "done" = done
       )
   })
+  output$edit_metadata = renderUI({
+    validate(need(profiles$global_metadata_default, "data not loaded"))
+
+    lapply(editable_metadata, function(i){
+      # generate UI dynamically
+      id = paste0("netcdf-", i)
+      default_value = profiles$global_metadata_default[[i]] # use copy to avoid instant-writeback
+      textInput(id, i, value=default_value)
+    })
+  })
+  output$metadata = renderText({
+    validate(need(profiles$global_metadata, ""))
+    for(i in editable_metadata){
+      id = paste0("netcdf-", i)
+      profiles$global_metadata[[i]] = input[[id]]
+    }
+    paste(names(profiles$global_metadata), "; ", profiles$global_metadata, collapse="\n")
+  })
+
 })
 
 
