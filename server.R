@@ -147,7 +147,6 @@ shinyServer(function(input, output, session) {
       # extract the y variable
     y = profiles$data[[input$select_profile]]@data[[input$y]]
     x = profiles$data[[input$select_profile]]@data[[input$x1]]
-    profiles$state$input_x1 = input$x1
       # replace with NA sections of x which match the selected y
     profiles$data[[input$select_profile]]@data[[input$x1]][y %between% y_select & x %between% x_select] = NA
       # write details to ctd log
@@ -434,7 +433,7 @@ shinyServer(function(input, output, session) {
   })
 
   output$bottle_plot = renderPlot({
-    if(input$Plot_bottle_select == "Salinity"){
+    if(input$Plot_bottle_select == "salinity"){
       dat = hot_to_r(input$bottles)[bottle_sal != 0]
       m = lm(data = dat, salinity ~ bottle_sal)
       par(mfrow = c(1, 2))
