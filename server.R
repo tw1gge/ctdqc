@@ -433,7 +433,7 @@ shinyServer(function(input, output, session) {
   })
 
   output$bottle_plot = renderPlot({
-    if(input$Plot_bottle_select == "salinity"){
+    if(input$Plot_bottle_select == "Salinity"){
       dat = hot_to_r(input$bottles)[bottle_sal != 0]
       m = lm(data = dat, salinity ~ bottle_sal)
       par(mfrow = c(1, 2))
@@ -467,7 +467,7 @@ shinyServer(function(input, output, session) {
       profiles$bottle_coef[["oxygen_RINKO"]] = list(var = "oxygen_RINKO", slope = coef(m)[2], intercept = coef(m)[1])
     }
     if(input$Plot_bottle_select == "Chlorophyll"){
-      dat = hot_to_r(input$bottles)[bottle_O2 != 0]
+      dat = hot_to_r(input$bottles)[bottle_Chl != 0]
       m = lm(data = dat, fluorescence ~ bottle_Chl)
       par(mfrow = c(1, 2))
       plot(dat$bottle_Chl, dat$fluorescence,
