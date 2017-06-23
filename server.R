@@ -83,7 +83,7 @@ shinyServer(function(input, output, session) {
     dat = dat[, c("profile", "scan", names), with = F]
     dat[, scan0 := scan] # extra column needed for foverlaps
     setkey(scans, profile, start_scan, end_scan)
-    dat = foverlaps(dat, scans, by.x=c("profile", "scan", "scan0"), nomatch = 0)
+    dat = foverlaps(dat, na.omit(scans), by.x=c("profile", "scan", "scan0"), nomatch = 0)
       # calc_mean
     dat = dat[,lapply(.SD, mean), by = list(profile, fire_seq, niskin, dateTime), .SDcols = names]
     dat = cbind(dat, data.frame("bottle_sal" = 0, "bottle_O2" = 0, "bottle_Chl" = 0))
@@ -133,7 +133,16 @@ shinyServer(function(input, output, session) {
   })
 
   observeEvent(input$decimate,{
-    profiles$data = lapply(profiles$data, ctdDecimate, p=input$bin_size)
+    profiles$data = lapply(profiles$data, function(x){
+        # find data which is all NA
+      for(param in names(x@data)){
+        if(all(is.na(x[[param]]))){
+          warning(paste("no data for", param))
+          x[[param]] = NULL
+        }
+      }
+      return(ctdDecimate(x, p=input$bin_size))
+    })
   })
 
   observeEvent(input$revert,{
