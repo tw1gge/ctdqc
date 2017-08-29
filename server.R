@@ -7,7 +7,7 @@ library(rhandsontable, quietly=T)
 library(xml2, quietly=T)
 
 source("functions.R", local = T)
-CTDQC_version = "1.3"
+CTDQC_version = "1.4"
 editable_metadata = c("id", "title", "summary", "processing_level", "comment", "acknowledgment", "licence", "project", "creator", "creator_email")
 sensor_metadata = fread("sensor_table.csv")
 
@@ -330,9 +330,24 @@ shinyServer(function(input, output, session) {
   observeEvent(input$write_csv,{
     dir = parseDirPath(volumes, input$directory)
     withProgress(message = 'writing files...', value = 0, {
+      data = lapply(profiles$data , function(x) `@`( x , data))
+      metadata = lapply(profiles$data , function(x) `@`( x , metadata))
+      log = lapply(profiles$data , function(x) `@`( x , processingLog))
       for(p in names(profiles$data)){
         incProgress(1/length(profiles$data), detail = paste("writing", p))
-        write.ctd(profiles$data[[p]], file = paste0(p, ".csv"))
+        d = as.data.table(data[[p]])
+        if(!"latitude" %in% colnames(d)){
+          d$latitude = metadata[[p]]$latitude
+          d$longitude = metadata[[p]]$longitude
+        }
+        d$startTime = metadata[[p]]$startTime
+        d$station = metadata[[p]]$station
+        d[, dateTime := startTime + time]
+        if(any(grepl("ctdDecimate", log[[p]]$value))){
+          d = d[,-c("scan", "time", "dateTime"), with=F]
+        }
+        write.csv(d, file = paste0(dir, "/", p, ".csv"))
+        write.csv(as.data.table(log[[p]]), file = paste0(dir, "/", p, ".log"))
       }
     })
   })
