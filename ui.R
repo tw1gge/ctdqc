@@ -117,9 +117,12 @@ shinyUI(fluidPage(
                    actionButton('flag_par', "Flag all PAR (Night)", icon=icon("moon-o"))
                  ),
                  inputPanel(
-                   h4("Flurometer"),
+                   h4("Fluorometer"),
                    numericInput('par_flu_threshold', label = "Chlorophyll quenching PAR threshold", value = 1),
-                   actionButton('flag_flu', "Flag quenched chlorophyll fluorometry", icon=icon("ban"))
+                   actionButton('flag_flu', "Flag quenched chlorophyll fluorometry", icon=icon("ban")),
+                   column(6, numericInput('chl_factor', label="Chl Factor", value=1.0, step=0.01)),
+                   column(6, numericInput('chl_offset', label="Chl Offset", value=0.0, step=0.01)),
+                   actionButton('calc_flu', "derive Chlorophyll from flu regression", icon=icon("leaf"))
                  ),
                  inputPanel(
                    h4("Secondary CT"),
