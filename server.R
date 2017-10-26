@@ -7,7 +7,7 @@ library(rhandsontable, quietly=T)
 library(xml2, quietly=T)
 
 source("functions.R", local = T)
-CTDQC_version = "1.4"
+CTDQC_version = "1.5"
 editable_metadata = c("id", "title", "summary", "processing_level", "comment", "acknowledgment", "licence", "project", "creator", "creator_email")
 sensor_metadata = fread("sensor_table.csv")
 
@@ -459,10 +459,10 @@ shinyServer(function(input, output, session) {
   output$bottle_plot = renderPlot({
     if(input$Plot_bottle_select == "Salinity"){
       dat = hot_to_r(input$bottles)[bottle_sal != 0]
-      m = lm(data = dat, salinity ~ bottle_sal)
+      m = lm(data = dat, bottle_sal ~ salinity)
       par(mfrow = c(1, 2))
-      plot(dat$bottle_sal, dat$salinity,
-           col = "blue", xlab = "Salinity bottle", ylab = "CT", main = "CT vs Niskin, Primary CT",
+      plot(dat$salinity, dat$bottle_sal,
+           col = "blue", ylab = "Salinity bottle", xlab = "CT", main = "CT vs Niskin, Primary CT",
            sub = paste0("y = ", round(coef(m)[1], 3), " + ", round(coef(m)[2], 3),"x"))
       abline(m)
       hist(m$residuals, main = "Residuals (Primary CT)")
@@ -470,10 +470,10 @@ shinyServer(function(input, output, session) {
     }
     if(input$Plot_bottle_select == "Oxygen Optode"){
       dat = hot_to_r(input$bottles)[bottle_O2 != 0]
-      m = lm(data = dat, oxygen_optode ~ bottle_O2)
+      m = lm(data = dat, bottle_O2 ~ oxygen_optode)
       par(mfrow = c(1, 2))
-      plot(dat$bottle_O2, dat$oxygen_optode,
-           col = "green", xlab = "Winkler", ylab = "Optode", main = "Optode vs Winkler",
+      plot(dat$oxygen_optode, dat$bottle_O2,
+           col = "green", ylab = "Winkler", xlab = "Optode", main = "Optode vs Winkler",
            sub = paste0("y = ", round(coef(m)[1], 3), " + ", round(coef(m)[2], 3),"x"))
       abline(m)
       hist(m$residuals, main = "Residuals")
@@ -481,10 +481,10 @@ shinyServer(function(input, output, session) {
     }
     if(input$Plot_bottle_select == "Oxygen RINKO"){
       dat = hot_to_r(input$bottles)[bottle_O2 != 0]
-      m = lm(data = dat, oxygen_RINKO ~ bottle_O2)
+      m = lm(data = dat, bottle_O2 ~ oxygen_RINKO)
       par(mfrow = c(1, 2))
-      plot(dat$bottle_O2, dat$oxygen_RINKO,
-           col = "green", xlab = "Winkler", ylab = "RINKO", main = "RINKO vs Winkler",
+      plot(dat$oxygen_RINKO, dat$bottle_O2,
+           col = "green", ylab = "Winkler", xlab = "RINKO", main = "RINKO vs Winkler",
            sub = paste0("y = ", round(coef(m)[1], 3), " + ", round(coef(m)[2], 3),"x"))
       abline(m)
       hist(m$residuals, main = "Residuals")
@@ -492,10 +492,10 @@ shinyServer(function(input, output, session) {
     }
     if(input$Plot_bottle_select == "Chlorophyll"){
       dat = hot_to_r(input$bottles)[bottle_Chl != 0]
-      m = lm(data = dat, fluorescence ~ bottle_Chl)
+      m = lm(data = dat, bottle_Chl ~ fluorescence)
       par(mfrow = c(1, 2))
-      plot(dat$bottle_Chl, dat$fluorescence,
-           col = "green", xlab = "Chlorophyll (mg/l)", ylab = "Fluorescence", main = "Seapoint Vs Chlorophyll",
+      plot(dat$fluorescence, dat$bottle_Chl,
+           col = "green", ylab = "Chlorophyll (mg/l)", xlab = "Fluorescence", main = "Seapoint Vs Chlorophyll",
            sub = paste0("y = ", round(coef(m)[1], 3), " + ", round(coef(m)[2], 3),"x"))
       abline(m)
       hist(m$residuals, main = "Residuals")
