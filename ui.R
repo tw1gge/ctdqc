@@ -21,7 +21,7 @@ shinyUI(fluidPage(
 
   # Sidebar with a slider input for number of bins
   sidebarLayout(
-    sidebarPanel(width = 3,
+    sidebarPanel(width = 4,
       textOutput('directory'),
       shinyDirButton('directory', 'Select Folder', 'Please select a folder'),
       actionButton('read_files', "Read .cnv files", icon=icon("book")),
@@ -42,10 +42,10 @@ shinyUI(fluidPage(
       actionButton('mark_complete_QC2', "Mark QC2 done", icon=icon("check-square")),
       actionButton('mark_complete_all', "Mark All QC complete", icon=icon("check-square")),
       tableOutput("progress")
-    ),
+      ),
 
     # Show a plot of the generated distribution
-    mainPanel(width = 9,
+    mainPanel(width = 8,
       tabsetPanel(
         tabPanel("Summary",
                  verbatimTextOutput("summary"),
@@ -65,19 +65,19 @@ shinyUI(fluidPage(
                    column(4, selectInput("y", "Y axis", choices = NULL)),
                    column(4, selectInput("x1", "Primary (Blue) X axis", choices = NULL)),
                    column(4, selectInput("x2", "Secondary (Red) X axis", choices = NULL))
-                 ),
+                   ),
                  plotOutput("profile_plot", brush = brushOpts("flag_brush", direction = "xy"), height="800px"),
                  h6("Flags and factors are applied to the primary axis only and for all dips"),
                  h4("Flag"),
                  actionButton('apply_flag', "Apply Flag", icon=icon("flag")),
                  inputPanel(
-                 h4("Factor / Offset"),
+                   h4("Factor / Offset"),
                    fluidRow(
                      column(6, numericInput('factor', label="Factor", value=1.0, step=0.01)),
                      column(6, numericInput('offset', label="Offset", value=0.0, step=0.01))
+                     ),
+                   actionButton('apply_factor', "Apply Factor + Offset", icon=icon("flag"))
                    ),
-                 actionButton('apply_factor', "Apply Factor + Offset", icon=icon("flag"))
-                 ),
                  h4("CTD / Niskin regressions"),
                  tableOutput("bottle_coef")
                  ),
@@ -85,50 +85,65 @@ shinyUI(fluidPage(
         tabPanel("Table", dataTableOutput("datatable")),
         tabPanel("Map", leafletOutput("map")),
         tabPanel("Sensors",
-                 inputPanel(
-                   h4("Optode"),
-                   fluidRow(
-                     column(6, selectInput('optode_T_channel', "Optode Temperature channel", choices = vchannels, selected = "v7") ),
-                     column(6, selectInput('optode_dphase_channel', "Optode dPhase channel", choices = vchannels, selected = "v6") )
-                   ),
-                   selectInput("optode_foil", "Optode foil Batch #", choices = NULL),
-                   actionButton('optode', "Process Optode", icon=icon("life-ring"))
-                 ),
-                 inputPanel(
-                   h4("RINKO"),
-                   fluidRow(
-                     column(6, selectInput('rinko_T_channel', "RINKO Temperature channel", choices = vchannels, selected = "v5") ),
-                     column(6, selectInput('rinko_O_channel', "RINKO Oxygen channel", choices = vchannels, selected = "v4") )
-                   ),
-                   fluidRow(
-                     column(6, numericInput('rinko_G', label = "G", value = 0)),
-                     column(6, numericInput('rinko_H', label = "H", value = 1))
-                   ),
-                   actionButton('rinko', "Process RINKO", icon=icon("times-circle-o"))
-                 ),
-                 inputPanel(
-                   h4("Licor PAR"),
-                   fluidRow(
-                     column(6, selectInput('par_channel', "PAR channel", choices = vchannels, selected = "v0") )
-                   ),
-                   numericInput('licor_factor', label = "Licor factor", value = 0.22345679),
-                   numericInput('licor_offset', label = "Licor offset", value = 3.3737),
-                   actionButton('licor', "Process Licor PAR", icon=icon("beer")),
-                   actionButton('flag_par', "Flag all PAR (Night)", icon=icon("moon-o"))
-                 ),
-                 inputPanel(
-                   h4("Fluorometer"),
-                   numericInput('par_flu_threshold', label = "Chlorophyll quenching PAR threshold", value = 1),
-                   actionButton('flag_flu', "Flag quenched chlorophyll fluorometry", icon=icon("ban")),
-                   column(6, numericInput('chl_factor', label="Chl Factor", value=1.0, step=0.01)),
-                   column(6, numericInput('chl_offset', label="Chl Offset", value=0.0, step=0.01)),
-                   actionButton('calc_flu', "derive Chlorophyll from flu regression", icon=icon("leaf"))
-                 ),
-                 inputPanel(
-                   h4("Secondary CT"),
-                   actionButton('secondCT', "Overwrite Primary CT with secondary", icon=icon("reply-all"))
-                 )
-                 ),
+          fluidRow(
+            column(2,
+              h4("Optode"),
+              selectInput("serial_optode", "Optode", choices=optode_serials)
+              ),
+            column(5,
+              selectInput('optode_T_channel', "Optode Temperature channel", choices = vchannels, selected = "v7"),
+              selectInput("optode_foil", "Optode foil Batch #", choices = NULL)
+              ),
+            column(5,
+              selectInput('optode_dphase_channel', "Optode dPhase channel", choices = vchannels, selected = "v6"),
+              actionButton('optode', "Process Optode", icon=icon("life-ring"))
+              )
+            ),
+          fluidRow(
+            column(2, h4("RINKO")),
+            column(5,
+              selectInput('rinko_T_channel', "RINKO Temperature channel", choices = vchannels, selected = "v5"),
+              numericInput('rinko_G', label = "G Coefficent", value = 0)
+              ),
+            column(5,
+              selectInput('rinko_O_channel', "RINKO Oxygen channel", choices = vchannels, selected = "v4"),
+              numericInput('rinko_H', label = "H Coefficent", value = 1),
+              actionButton('rinko', "Process RINKO", icon=icon("times-circle-o"))
+              )
+          ),
+
+          fluidRow(
+            column(2, h4("Licor PAR")),
+            column(5,
+              selectInput('par_channel', "PAR channel", choices = vchannels, selected = "v0"),
+              actionButton('flag_par', "Flag all PAR (Night)", icon=icon("moon-o"))
+              ),
+            column(5,
+              numericInput('licor_factor', label = "Licor factor", value = 0.22345679),
+              numericInput('licor_offset', label = "Licor offset", value = 3.3737),
+              actionButton('licor', "Process Licor PAR", icon=icon("beer"))
+              )
+          ),
+
+          fluidRow(
+            column(2, h4("Fluorometer")),
+            column(5,
+              numericInput('par_flu_threshold', label = "Chlorophyll quenching PAR threshold", value = 1),
+              actionButton('flag_flu', "Flag quenched chlorophyll fluorometry", icon=icon("ban"))
+              ),
+            column(5,
+              numericInput('chl_factor', label="Chl Factor", value=1.0, step=0.01),
+              numericInput('chl_offset', label="Chl Offset", value=0.0, step=0.01),
+              actionButton('calc_flu', "derive Chlorophyll from flu regression", icon=icon("leaf"))
+              )
+            ),
+          fluidRow(
+            column(2, h4("Secondary CT")),
+            column(5,
+              actionButton('secondCT', "Overwrite Primary CT with secondary", icon=icon("reply-all"))
+              )
+            )
+          ),
         tabPanel("Bottles",
                    rHandsontableOutput("bottles"),
                  fluidRow(
