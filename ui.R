@@ -85,6 +85,8 @@ shinyUI(fluidPage(
         tabPanel("Table", dataTableOutput("datatable")),
         tabPanel("Map", leafletOutput("map")),
         tabPanel("Sensors",
+          h5("Check sensor serials against xml!"),
+          hr(),
           fluidRow(
             column(2,
               h4("Optode"),
@@ -99,8 +101,12 @@ shinyUI(fluidPage(
               actionButton('optode', "Process Optode", icon=icon("life-ring"))
               )
             ),
+          hr(),
           fluidRow(
-            column(2, h4("RINKO")),
+            column(2,
+              h4("RINKO"),
+              selectInput("serial_rinko", "Rinko", choices=rinko_serials)
+              ),
             column(5,
               selectInput('rinko_T_channel', "RINKO Temperature channel", choices = vchannels, selected = "v5"),
               numericInput('rinko_G', label = "G Coefficent", value = 0)
@@ -110,10 +116,13 @@ shinyUI(fluidPage(
               numericInput('rinko_H', label = "H Coefficent", value = 1),
               actionButton('rinko', "Process RINKO", icon=icon("times-circle-o"))
               )
-          ),
-
+            ),
+          hr(),
           fluidRow(
-            column(2, h4("Licor PAR")),
+            column(2,
+              h4("Licor PAR"),
+              selectInput("serial_par", "PAR", choices=par_serials)
+              ),
             column(5,
               selectInput('par_channel', "PAR channel", choices = vchannels, selected = "v0"),
               actionButton('flag_par', "Flag all PAR (Night)", icon=icon("moon-o"))
@@ -123,10 +132,13 @@ shinyUI(fluidPage(
               numericInput('licor_offset', label = "Licor offset", value = 3.3737),
               actionButton('licor', "Process Licor PAR", icon=icon("beer"))
               )
-          ),
-
+            ),
+          hr(),
           fluidRow(
-            column(2, h4("Fluorometer")),
+            column(2,
+              h4("Fluorometer"),
+              selectInput("serial_flu", "Fluorometer", choices=fluorometer_serials)
+              ),
             column(5,
               numericInput('par_flu_threshold', label = "Chlorophyll quenching PAR threshold", value = 1),
               actionButton('flag_flu', "Flag quenched chlorophyll fluorometry", icon=icon("ban"))
@@ -137,44 +149,51 @@ shinyUI(fluidPage(
               actionButton('calc_flu', "derive Chlorophyll from flu regression", icon=icon("leaf"))
               )
             ),
+          hr(),
           fluidRow(
-            column(2, h4("Secondary CT")),
+            column(2,
+              h4("Secondary CT"),
+              selectInput("serial_temp", "Temperature", choices=temperature_serials),
+              selectInput("serial_cond", "Conductivity", choices=conductivity_serials)
+              ),
             column(5,
               actionButton('secondCT', "Overwrite Primary CT with secondary", icon=icon("reply-all"))
+              )
+            ),
+          hr(),
+          fluidRow(
+            column(2,
+              h4("Pressure"),
+              selectInput("serial_prs", "Pressure", choices=pressure_serials)
+              )
+            ),
+          hr(),
+          fluidRow(
+            column(2,
+              h4("Altimeter"),
+              selectInput("serial_alt", "Altimeter", choices=altimeter_serials)
               )
             )
           ),
         tabPanel("Bottles",
-                   rHandsontableOutput("bottles"),
-                 fluidRow(
-                   h4("CTD / Niskin regressions"),
-                   selectInput("Plot_bottle_select", NULL, choices = c("Select parameter" = "", "Salinity", "Oxygen Optode", "Oxygen RINKO", "Chlorophyll")),
-                   plotOutput("bottle_plot")
-                 )
-                 ),
+          rHandsontableOutput("bottles"),
+          fluidRow(
+            h4("CTD / Niskin regressions"),
+            selectInput("Plot_bottle_select", NULL, choices = c("Select parameter" = "", "Salinity", "Oxygen Optode", "Oxygen RINKO", "Chlorophyll")),
+            plotOutput("bottle_plot")
+            )
+          ),
         tabPanel("Metadata",
-                 # dynamically generated UI
-                 actionButton('make_netcdf', "Publish NetCDF", icon=icon("object-group")),
-                 fluidRow(
-                   column(6,
-                     h4("Global metadata"),
-                     uiOutput("edit_metadata")
-                     ),
-                   column(6,
-                     h4("Sensor serial numbers"),
-                     h5("Check against xml!"),
-                     selectInput("serial_temp", "Temperature", choices=temperature_serials),
-                     selectInput("serial_cond", "Conductivity", choices=conductivity_serials),
-                     selectInput("serial_prs", "Pressure", choices=pressure_serials),
-                     selectInput("serial_alt", "Altimeter", choices=altimeter_serials),
-                     selectInput("serial_par", "PAR", choices=par_serials),
-                     selectInput("serial_ftu", "Turbidity", choices=turbidity_serials),
-                     selectInput("serial_flu", "Fluorometer", choices=fluorometer_serials),
-                     selectInput("serial_rinko", "Rinko", choices=rinko_serials),
-                     selectInput("serial_optode", "Optode", choices=optode_serials)
-                     )
-                   ),
-                 verbatimTextOutput("metadata")
+          # dynamically generated UI
+          actionButton('make_netcdf', "Publish NetCDF", icon=icon("object-group")),
+          fluidRow(
+            column(6,
+              h4("Global metadata"),
+              uiOutput("edit_metadata")
+              ),
+            column(6)
+            ),
+          verbatimTextOutput("metadata")
         )
       )
     )
