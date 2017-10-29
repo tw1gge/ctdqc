@@ -268,23 +268,22 @@ shinyServer(function(input, output, session) {
   })
 
   observeEvent(input$licor, {
-    licor_par = par_from_voltage(
-        profiles$untrimmed[[input$select_profile]]@data[[input$par_channel]],
-        input$licor_factor, input$licor_offset)
+      # loop and apply to all dips
+    for(i in 1:length(profiles$data)){
+      # calculate using untrimmed data
+      licor_par = par_from_voltage(profiles$untrimmed[[i]]@data[[input$par_channel]], input$licor_factor, input$licor_offset)
+      profiles$untrimmed[[i]] = oceSetData(profiles$untrimmed[[i]], "par", licor_par,
+                                           unit = list(unit=expression(umol~s-1~m-2), scale = "PAR/Irradiance, Cefas Licor PAR"))
+      # now subset and add to data
+      x = subset(profiles$untrimmed[[i]],
+                 scan >= min(profiles$data[[i]][["scan"]], na.rm=T) &
+                 scan <= max(profiles$data[[i]][["scan"]], na.rm=T))
 
-    # add to untrimmed
-    profiles$untrimmed[[input$select_profile]] = oceSetData(profiles$untrimmed[[input$select_profile]],
-                                                         "par", licor_par,
-                                                         unit = list(unit=expression(umol~s-1~m-2), scale = "PAR/Irradiance, Cefas Licor PAR"))
-    # now subset and add to data
-    x = subset(profiles$untrimmed[[input$select_profile]],
-               scan >= min(profiles$data[[input$select_profile]][["scan"]], na.rm=T) &
-               scan <= max(profiles$data[[input$select_profile]][["scan"]], na.rm=T))
-    log = paste("PAR processed with factor =", input$licor_factor, ",offset =", input$licor_offset)
-    profiles$data[[input$select_profile]] = oceSetData(profiles$data[[input$select_profile]],
-                                                       "par", x[["par"]],
-                                                       unit = list(unit=expression(umol~s-1~m-2), scale = "PAR/Irradiance, Cefas Licor PAR"),
-                                                       note = log)
+      log = paste("PAR processed with factor =", input$licor_factor, ",offset =", input$licor_offset)
+      profiles$data[[i]] = oceSetData(profiles$data[[i]], "par", x[["par"]],
+                                      unit = list(unit=expression(umol~s-1~m-2), scale = "PAR/Irradiance, Cefas Licor PAR"),
+                                      note = log)
+    }
   })
 
   observeEvent(input$flag_par, {
