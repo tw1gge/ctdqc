@@ -90,7 +90,7 @@ shinyUI(fluidPage(
           fluidRow(
             column(2,
               h4("Optode"),
-              selectInput("serial_optode", "Optode", choices=optode_serials)
+              selectInput("serial_optode", "Optode Serial", choices=optode_serials)
               ),
             column(5,
               selectInput('optode_T_channel', "Optode Temperature channel", choices = vchannels, selected = "v7"),
@@ -105,7 +105,7 @@ shinyUI(fluidPage(
           fluidRow(
             column(2,
               h4("RINKO"),
-              selectInput("serial_rinko", "Rinko", choices=rinko_serials)
+              selectInput("serial_rinko", "Rinko Serial", choices=rinko_serials)
               ),
             column(5,
               selectInput('rinko_T_channel', "RINKO Temperature channel", choices = vchannels, selected = "v5"),
@@ -121,11 +121,11 @@ shinyUI(fluidPage(
           fluidRow(
             column(2,
               h4("Licor PAR"),
-              selectInput("serial_par", "PAR", choices=par_serials)
+              selectInput("serial_par", "PAR Serial", choices=par_serials)
               ),
             column(5,
               selectInput('par_channel', "PAR channel", choices = vchannels, selected = "v0"),
-              actionButton('flag_par', "Flag all PAR (Night)", icon=icon("moon-o"))
+              actionButton('flag_par', "Flag all PAR for selected dip (Night)", icon=icon("moon-o"))
               ),
             column(5,
               numericInput('licor_factor', label = "Licor factor", value = 0.22345679),
@@ -137,7 +137,7 @@ shinyUI(fluidPage(
           fluidRow(
             column(2,
               h4("Fluorometer"),
-              selectInput("serial_flu", "Fluorometer", choices=fluorometer_serials)
+              selectInput("serial_flu", "Fluorometer Serial", choices=fluorometer_serials)
               ),
             column(5,
               numericInput('par_flu_threshold', label = "Chlorophyll quenching PAR threshold", value = 1),
@@ -153,8 +153,8 @@ shinyUI(fluidPage(
           fluidRow(
             column(2,
               h4("Secondary CT"),
-              selectInput("serial_temp", "Temperature", choices=temperature_serials),
-              selectInput("serial_cond", "Conductivity", choices=conductivity_serials)
+              selectInput("serial_temp", "Temperature Serial", choices=temperature_serials),
+              selectInput("serial_cond", "Conductivity Serial", choices=conductivity_serials)
               ),
             column(5,
               actionButton('secondCT', "Overwrite Primary CT with secondary", icon=icon("reply-all"))
@@ -164,14 +164,14 @@ shinyUI(fluidPage(
           fluidRow(
             column(2,
               h4("Pressure"),
-              selectInput("serial_prs", "Pressure", choices=pressure_serials)
+              selectInput("serial_prs", "Pressure Serial", choices=pressure_serials)
               )
             ),
           hr(),
           fluidRow(
             column(2,
               h4("Altimeter"),
-              selectInput("serial_alt", "Altimeter", choices=altimeter_serials)
+              selectInput("serial_alt", "Altimeter Serial", choices=altimeter_serials)
               )
             )
           ),
