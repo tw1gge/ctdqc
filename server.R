@@ -511,6 +511,9 @@ shinyServer(function(input, output, session) {
     print(rbindlist(profiles$bottle_coef))
     rbindlist(profiles$bottle_coef)
   })
+  output$chl_coef = renderTable({
+    data.frame(profiles$bottle_coef[["fluorescence"]])
+  })
   output$progress = renderTable({
     # fetch processing log then grep for string to check progress
     log = lapply(profiles$data , function(x) `@`( x , processingLog))

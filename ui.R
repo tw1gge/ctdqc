@@ -141,7 +141,8 @@ shinyUI(fluidPage(
               ),
             column(5,
               numericInput('par_flu_threshold', label = "Chlorophyll quenching PAR threshold", value = 1),
-              actionButton('flag_flu', "Flag quenched chlorophyll fluorometry", icon=icon("ban"))
+              actionButton('flag_flu', "Flag quenched chlorophyll fluorometry", icon=icon("ban")),
+              tableOutput("chl_coef")
               ),
             column(5,
               numericInput('chl_factor', label="Chl Factor", value=1.0, step=0.01),
