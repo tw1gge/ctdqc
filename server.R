@@ -209,22 +209,23 @@ shinyServer(function(input, output, session) {
       optode_oxygen = optode.phaseCalc(optode_Dphase, optode_temperature, subset(optode_coefs, batch == input$optode_foil))
       optode_oxygen = optode.correction(optode_oxygen, optode_temperature, salinity, depth)
       # add to untrimmed
-      profiles$untrimmed[[i]] = ctdAddColumn(profiles$untrimmed[[i]],
-                                             optode_temperature, "temperature_optode", label = "temperature",
-                                             unit = list(name=expression(degree*C), scale="Optode"))
-      profiles$untrimmed[[i]] = ctdAddColumn(profiles$untrimmed[[i]],
-                                             optode_oxygen, "oxygen_optode",
-                                             unit = list(name = expression(mmol~m-3), scale="Optode"))
+
+      # profiles$untrimmed[[i]] = oceSetData(profiles$untrimmed[[i]], "par", licor_par,
+      #                                      unit = list(unit=expression(umol~s-1~m-2), scale = "PAR/Irradiance, Cefas Licor PAR"))
+
+
+      profiles$untrimmed[[i]] = oceSetData(profiles$untrimmed[[i]], "temperature_optode", optode_temperature,
+                                             unit = list(unit=expression(degree*C), scale="Optode"))
+      profiles$untrimmed[[i]] = oceSetData(profiles$untrimmed[[i]], "oxygen_optode", optode_oxygen,
+                                             unit = list(unit=expression(mmol~m-3), scale="Optode"))
       # now subset and apply to $data, don't write subset to log
       x = subset(profiles$untrimmed[[i]],
                  scan >= min(profiles$data[[i]][["scan"]], na.rm=T) &
                  scan <= max(profiles$data[[i]][["scan"]], na.rm=T))
-      profiles$data[[i]] = ctdAddColumn(profiles$data[[i]],
-                                        x[["temperature_optode"]], "temperature_optode", label = "temperature",
-                                        unit = list(name=expression(degree*C), scale="Optode"))
-      profiles$data[[i]] = ctdAddColumn(profiles$data[[i]],
-                                        x[["oxygen_optode"]], "oxygen_optode",
-                                        unit = list(name = expression(mmol~m-3), scale="Optode"))
+      profiles$data[[i]] = oceSetData(profiles$data[[i]], "temperature_optode", x[["temperature_optode"]],
+                                        unit = list(unit=expression(degree*C), scale="Optode"))
+      profiles$data[[i]] = oceSetData(profiles$data[[i]], "oxygen_optode", x[["oxygen_optode"]],
+                                        unit = list(unit=expression(mmol~m-3), scale="Optode"))
       processingLog(profiles$data[[i]]) = paste("Optode processed with foil batch", input$optode_foil)
     }
   })
@@ -239,22 +240,19 @@ shinyServer(function(input, output, session) {
                               oC = rinko_coefs,
                               G = input$rinko_G, H = input$rinko_H)
       # add to untrimmed
-      profiles$untrimmed[[i]] = ctdAddColumn(profiles$untrimmed[[i]],
-                                             rinko_temperature, "temperature_RINKO", label = "temperature",
-                                             unit = list(name=expression(degree*C), scale="RINKO"))
-      profiles$untrimmed[[i]] = ctdAddColumn(profiles$untrimmed[[i]],
-                                             rinko_oxygen, "oxygen_RINKO", label = "oxygen",
-                                             unit = list(name = expression(mmol~m-3), scale="RINKO"))
+      profiles$untrimmed[[i]] = oceSetData(profiles$untrimmed[[i]], "temperature_RINKO", rinko_temperature,
+                                             unit = list(unit=expression(degree*C), scale="RINKO"))
+      profiles$untrimmed[[i]] = oceSetData(profiles$untrimmed[[i]], "oxygen_RINKO", rinko_oxygen,
+                                             unit = list(unit=expression(mmol~m-3), scale="RINKO"))
       # now subset and apply to $data, don't write subset to log
       x = subset(profiles$untrimmed[[i]],
                  scan >= min(profiles$data[[i]][["scan"]], na.rm=T) &
                  scan <= max(profiles$data[[i]][["scan"]], na.rm=T))
-      profiles$data[[i]] = ctdAddColumn(profiles$data[[i]],
-                                        x[["temperature_RINKO"]], "temperature_RINKO", label = "temperature",
-                                        unit = list(name=expression(degree*C), scale="RINKO"))
-      profiles$data[[i]] = ctdAddColumn(profiles$data[[i]],
-                                        x[["oxygen_RINKO"]], "oxygen_RINKO", label = "oxygen",
-                                        unit = list(name = expression(mmol~m-3), scale="RINKO"))
+
+      profiles$data[[i]] = oceSetData(profiles$data[[i]], "temperature_RINKO", x[["temperature_RINKO"]],
+                                        unit = list(unit=expression(degree*C), scale="RINKO"))
+      profiles$data[[i]] = oceSetData(profiles$data[[i]], "oxygen_RINKO", x[["oxygen_RINKO"]],
+                                        unit = list(unit=expression(mmol~m-3), scale="RINKO"))
       processingLog(profiles$data[[i]]) = paste("RINKO processed with coefs",
                                                 rinko_coefs[["serial"]],
                                                 ",G =", input$rinko_G,
