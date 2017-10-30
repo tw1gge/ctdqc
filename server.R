@@ -201,75 +201,70 @@ shinyServer(function(input, output, session) {
 
   observeEvent(input$optode, {
     # first calculate for all data (using untrimmed)
-    optode_temperature = optode.analogtemp(
-        profiles$untrimmed[[input$select_profile]]@data[[input$optode_T_channel]]
-        )
-    optode_Dphase = optode.analogDphase(
-        profiles$untrimmed[[input$select_profile]]@data[[input$optode_dphase_channel]]
-        )
-    salinity = profiles$untrimmed[[input$select_profile]]@data[["salinity"]]
-    depth = profiles$untrimmed[[input$select_profile]]@data[["depth"]]
-    optode_oxygen = optode.phaseCalc(optode_Dphase, optode_temperature, subset(optode_coefs, batch == input$optode_foil))
-    optode_oxygen = optode.correction(optode_oxygen, optode_temperature, salinity, depth)
-    # add to untrimmed
-    profiles$untrimmed[[input$select_profile]] = ctdAddColumn(profiles$untrimmed[[input$select_profile]],
-                                                         optode_temperature, "temperature_optode", label = "temperature",
-                                                         unit = list(name=expression(degree*C), scale="Optode"))
-    profiles$untrimmed[[input$select_profile]] = ctdAddColumn(profiles$untrimmed[[input$select_profile]],
-                                                         optode_oxygen, "oxygen_optode",
-                                                         unit = list(name = expression(mmol~m-3), scale="Optode"))
-    # now subset and apply to $data, don't write subset to log
-    x = subset(profiles$untrimmed[[input$select_profile]],
-               scan >= min(profiles$data[[input$select_profile]][["scan"]], na.rm=T) &
-               scan <= max(profiles$data[[input$select_profile]][["scan"]], na.rm=T))
-    profiles$data[[input$select_profile]] = ctdAddColumn(profiles$data[[input$select_profile]],
-                                                         x[["temperature_optode"]], "temperature_optode", label = "temperature",
-                                                         unit = list(name=expression(degree*C), scale="Optode"))
-    profiles$data[[input$select_profile]] = ctdAddColumn(profiles$data[[input$select_profile]],
-                                                         x[["oxygen_optode"]], "oxygen_optode",
-                                                         unit = list(name = expression(mmol~m-3), scale="Optode"))
-    processingLog(profiles$data[[input$select_profile]]) = paste("Optode processed with foil batch", input$optode_foil)
+    for(i in names(profiles$data)){
+      optode_temperature = optode.analogtemp(profiles$untrimmed[[i]]@data[[input$optode_T_channel]])
+      optode_Dphase = optode.analogDphase(profiles$untrimmed[[i]]@data[[input$optode_dphase_channel]])
+      salinity = profiles$untrimmed[[i]]@data[["salinity"]]
+      depth = profiles$untrimmed[[i]]@data[["depth"]]
+      optode_oxygen = optode.phaseCalc(optode_Dphase, optode_temperature, subset(optode_coefs, batch == input$optode_foil))
+      optode_oxygen = optode.correction(optode_oxygen, optode_temperature, salinity, depth)
+      # add to untrimmed
+      profiles$untrimmed[[i]] = ctdAddColumn(profiles$untrimmed[[i]],
+                                             optode_temperature, "temperature_optode", label = "temperature",
+                                             unit = list(name=expression(degree*C), scale="Optode"))
+      profiles$untrimmed[[i]] = ctdAddColumn(profiles$untrimmed[[i]],
+                                             optode_oxygen, "oxygen_optode",
+                                             unit = list(name = expression(mmol~m-3), scale="Optode"))
+      # now subset and apply to $data, don't write subset to log
+      x = subset(profiles$untrimmed[[i]],
+                 scan >= min(profiles$data[[i]][["scan"]], na.rm=T) &
+                 scan <= max(profiles$data[[i]][["scan"]], na.rm=T))
+      profiles$data[[i]] = ctdAddColumn(profiles$data[[i]],
+                                        x[["temperature_optode"]], "temperature_optode", label = "temperature",
+                                        unit = list(name=expression(degree*C), scale="Optode"))
+      profiles$data[[i]] = ctdAddColumn(profiles$data[[i]],
+                                        x[["oxygen_optode"]], "oxygen_optode",
+                                        unit = list(name = expression(mmol~m-3), scale="Optode"))
+      processingLog(profiles$data[[i]]) = paste("Optode processed with foil batch", input$optode_foil)
+    }
   })
 
   observeEvent(input$rinko, {
-    # first calculate for all data (using untrimmed)
-    rinko_temperature = rinko_temp(
-        profiles$untrimmed[[input$select_profile]]@data[[input$rinko_T_channel]]
-        )
-    pressure =  unlist(profiles$untrimmed[[input$select_profile]]@data["pressure"])
-    rinko_oxygen = rinko_o2(
-        profiles$untrimmed[[input$select_profile]]@data[[input$rinko_O_channel]],
-        rinko_temperature,
-        S = profiles$untrimmed[[input$select_profile]]@data[["salinity"]],
-        oC = rinko_coefs,
-        G = input$rinko_G,
-        H = input$rinko_H
-        )
-    # add to untrimmed
-    profiles$untrimmed[[input$select_profile]] = ctdAddColumn(profiles$untrimmed[[input$select_profile]],
-                                                         rinko_temperature, "temperature_RINKO", label = "temperature",
-                                                         unit = list(name=expression(degree*C), scale="RINKO"))
-    profiles$untrimmed[[input$select_profile]] = ctdAddColumn(profiles$untrimmed[[input$select_profile]],
-                                                         rinko_oxygen, "oxygen_RINKO", label = "oxygen",
-                                                         unit = list(name = expression(mmol~m-3), scale="RINKO"))
-    # now subset and apply to $data, don't write subset to log
-    x = subset(profiles$untrimmed[[input$select_profile]],
-               scan >= min(profiles$data[[input$select_profile]][["scan"]], na.rm=T) &
-               scan <= max(profiles$data[[input$select_profile]][["scan"]], na.rm=T))
-    profiles$data[[input$select_profile]] = ctdAddColumn(profiles$data[[input$select_profile]],
-                                                         x[["temperature_RINKO"]], "temperature_RINKO", label = "temperature",
-                                                         unit = list(name=expression(degree*C), scale="RINKO"))
-    profiles$data[[input$select_profile]] = ctdAddColumn(profiles$data[[input$select_profile]],
-                                                         x[["oxygen_RINKO"]], "oxygen_RINKO", label = "oxygen",
-                                                         unit = list(name = expression(mmol~m-3), scale="RINKO"))
-    processingLog(profiles$data[[input$select_profile]]) = paste("RINKO processed with coefs", rinko_coefs[["serial"]],
-                                                                 ",G =", input$rinko_G,
-                                                                 ",H =", input$rinko_H)
+    for(i in names(profiles$data)){
+      rinko_temperature = rinko_temp(profiles$untrimmed[[i]]@data[[input$rinko_T_channel]])
+      pressure =  unlist(profiles$untrimmed[[i]]@data["pressure"])
+      rinko_oxygen = rinko_o2(profiles$untrimmed[[i]]@data[[input$rinko_O_channel]],
+                              rinko_temperature,
+                              S = profiles$untrimmed[[i]]@data[["salinity"]],
+                              oC = rinko_coefs,
+                              G = input$rinko_G, H = input$rinko_H)
+      # add to untrimmed
+      profiles$untrimmed[[i]] = ctdAddColumn(profiles$untrimmed[[i]],
+                                             rinko_temperature, "temperature_RINKO", label = "temperature",
+                                             unit = list(name=expression(degree*C), scale="RINKO"))
+      profiles$untrimmed[[i]] = ctdAddColumn(profiles$untrimmed[[i]],
+                                             rinko_oxygen, "oxygen_RINKO", label = "oxygen",
+                                             unit = list(name = expression(mmol~m-3), scale="RINKO"))
+      # now subset and apply to $data, don't write subset to log
+      x = subset(profiles$untrimmed[[i]],
+                 scan >= min(profiles$data[[i]][["scan"]], na.rm=T) &
+                 scan <= max(profiles$data[[i]][["scan"]], na.rm=T))
+      profiles$data[[i]] = ctdAddColumn(profiles$data[[i]],
+                                        x[["temperature_RINKO"]], "temperature_RINKO", label = "temperature",
+                                        unit = list(name=expression(degree*C), scale="RINKO"))
+      profiles$data[[i]] = ctdAddColumn(profiles$data[[i]],
+                                        x[["oxygen_RINKO"]], "oxygen_RINKO", label = "oxygen",
+                                        unit = list(name = expression(mmol~m-3), scale="RINKO"))
+      processingLog(profiles$data[[i]]) = paste("RINKO processed with coefs",
+                                                rinko_coefs[["serial"]],
+                                                ",G =", input$rinko_G,
+                                                ",H =", input$rinko_H)
+    }
   })
 
   observeEvent(input$licor, {
       # loop and apply to all dips
-    for(i in 1:length(profiles$data)){
+    for(i in names(profiles$data)){
       # calculate using untrimmed data
       licor_par = par_from_voltage(profiles$untrimmed[[i]]@data[[input$par_channel]], input$licor_factor, input$licor_offset)
       profiles$untrimmed[[i]] = oceSetData(profiles$untrimmed[[i]], "par", licor_par,
