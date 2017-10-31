@@ -180,7 +180,7 @@ shinyServer(function(input, output, session) {
   observeEvent(input$calc_flu,{
     # lapply though and apply to all dips
     profiles$data = lapply(profiles$data, function(x) {
-      raw = x@data[["fluroescence"]]
+      raw = x@data[["fluorescence"]]
       mod = (raw * input$chl_factor) + input$chl_offset
       x@data[["chlorophyll"]] = mod
       log = paste("Chlorophyll derived with factor", input$factor, ", offset", input$offset)
