@@ -183,7 +183,7 @@ shinyServer(function(input, output, session) {
       raw = x@data[["fluorescence"]]
       mod = (raw * input$chl_factor) + input$chl_offset
       x@data[["chlorophyll"]] = mod
-      log = paste("Chlorophyll derived with factor", input$factor, ", offset", input$offset)
+      log = paste("Chlorophyll derived with factor", input$chl_factor, ", offset", input$chl_offset)
       processingLog(x) = log
       return(x)
     })
