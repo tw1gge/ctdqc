@@ -19,10 +19,18 @@ shinyServer(function(input, output, session) {
   output$directory = renderText({paste0(parseDirPath(volumes, input$directory), "/")})
   # make dynamic file list for storing the CTD objects, a list of S4 objects
   profiles = reactiveValues(data = NULL, bottles = NA)
-   ## read data
+
   observeEvent(input$read_files, {
-    if(is.null(input$directory)){ return(NULL) } # stop crashing when you missclick
+   ## read data
+    if(is.null(input$directory)){ # stop crashing when you missclick
+      warning("no folder selected")
+      return(NULL)
+      }
     filelist = list.files(parseDirPath(volumes, input$directory), full.names = F, pattern = "*.cnv")
+    if(length(filelist) == 0){ # don't crash if folder is empty
+      warning("no .cnv files found in directory")
+      return(NULL)
+      }
     dir = parseDirPath(volumes, input$directory)
     d = list()
     m = list()
@@ -37,6 +45,8 @@ shinyServer(function(input, output, session) {
       # check if filter has been applied
     headers = extract.metadata(d, "header")
     filtered = stringr::str_count(headers, "filter_low_pass")
+    if(filtered < length(d)){warning("WARNING - pressure filter has not been applied for all profiles!") }
+
       # insert data into data slot
     profiles$data = d
     profiles$metadata = m
@@ -48,7 +58,6 @@ shinyServer(function(input, output, session) {
     profiles$global_metadata = netcdf.metadata(profiles$data, profiles$positions)
     profiles$global_metadata_default = profiles$global_metadata
     if(length(unique(profiles$positions$cruise)) > 1){warning("WARNING - Cruise ID differ between cnv files!")}
-    if(filtered < length(d)){warning("WARNING - pressure filter has not been applied for all profiles!") }
     if(length(unique(m)) != 1){ warning("WARNING - xml header differs between files") }
   })
 
@@ -72,7 +81,7 @@ shinyServer(function(input, output, session) {
         b[[i]] = scans
       }
     })
-    scans = rbindlist(b)
+    scans = data.table(rbindlist(b))
       # for each ctd in the list, extract the data, then for each extract convert to data.frame, then combine
     dat = rbindlist(lapply(lapply(profiles$untrimmed , function(x) `@`( x , data)), data.frame), idcol = "profile", fill = T)
       # select only the columns we want, if they are available
@@ -453,10 +462,13 @@ shinyServer(function(input, output, session) {
   })
   output$bottles = renderRHandsontable({
       # editable table
+
     validate(need(profiles$bottles, "bottle file not loaded"))
+
+    avail_sal_cols = colnames(profiles$bottles)[chmatch(c("salinity", "salinity2", "bottle_sal"), colnames(profiles$bottles))]
     rhandsontable(profiles$bottles, readOnly = T, digits = 6, highlightRow = T) %>%
       hot_col(c("bottle_sal", "bottle_O2", "bottle_Chl"), readOnly = F) %>%
-      hot_col(c("salinity", "salinity2", "bottle_sal"), format = "0.0000") %>%
+      hot_col(na.omit(avail_sal_cols), format = "0.0000") %>%
       hot_context_menu(allowRowEdit = FALSE, allowColEdit = FALSE)
   })
 

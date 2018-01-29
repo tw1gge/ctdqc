@@ -49,6 +49,7 @@ optode.correction <- function(O2, t, S, depth = 0, optode_salinity = 0){
 }
 
 par_from_voltage <- function(x, factor, offset){
+  # for LiCor Li-192 PAR with Cefas low light amplifier
     return(factor * exp(offset * x))
 }
 
