@@ -4,13 +4,13 @@ library(leaflet, quietly=T)
 library(rhandsontable, quietly=T)
 
 vchannels = c("v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7")
-temperature_serials = c("5558", "5823")
-conductivity_serials = c("4499", "4523")
-pressure_serials = c("1274")
+temperature_serials = c("5558", "5823", "6267", "6268")
+conductivity_serials = c("4499", "4523", "4724", "4725")
+pressure_serials = c("1274", "1343")
 par_serials = c("49")
-altimeter_serials = c("68799")
-turbidity_serials = c("11618")
-fluorometer_serials = c("2315")
+altimeter_serials = c("68799", "73082")
+turbidity_serials = c("11618", "14426")
+fluorometer_serials = c("2315", "3817")
 optode_serials = c("752")
 rinko_serials = c("0263")
 
@@ -36,7 +36,6 @@ shinyUI(fluidPage(
 
       h4("Save"),
       actionButton('write_rdata', "Write Rdata", icon=icon("bookmark")),
-      actionButton('write_csv', "Write csv's", icon=icon("table")),
 
       h4("Progress"),
       actionButton('mark_complete_QC2', "Mark QC2 done", icon=icon("check-square")),
@@ -184,9 +183,11 @@ shinyUI(fluidPage(
             plotOutput("bottle_plot")
             )
           ),
-        tabPanel("Metadata",
+        tabPanel("Publish",
           # dynamically generated UI
+          # selectInput('publish_variables', 'Variables to publish', sensor_metadata$parameter, multiple=T, selectize=T),
           actionButton('make_netcdf', "Publish NetCDF", icon=icon("object-group")),
+          actionButton('write_csv', "Write csv's", icon=icon("table")),
           fluidRow(
             column(6,
               h4("Global metadata"),
