@@ -7,9 +7,12 @@ library(rhandsontable, quietly=T)
 library(xml2, quietly=T)
 
 source("functions.R", local = T)
-CTDQC_version = "1.5"
+CTDQC_version = "1.6"
 editable_metadata = c("id", "title", "summary", "processing_level", "comment", "acknowledgment", "licence", "project", "creator", "creator_email")
 sensor_metadata = fread("sensor_table.csv")
+ctd_columns = list(
+  PAR = list(name="par/sat/log", unit=list(expression(), scale="umol photon m-2"))
+  )
 
 shinyServer(function(input, output, session) {
 
@@ -38,14 +41,15 @@ shinyServer(function(input, output, session) {
       for(i in filelist){
         # Increment the progress bar, and update the detail text.
         incProgress(1/length(filelist), detail = paste("loading", i))
-        d[[i]] = read.ctd.sbe(paste0(dir,"/",i))
+        d[[i]] = read.ctd.sbe(paste0(dir,"/",i), columns=ctd_columns)
         m[[i]] = parse_sbe_xml(d[[i]])
       }
     })
       # check if filter has been applied
-    headers = extract.metadata(d, "header")
+    headers = extract.oce.metadata(d, "header")
     filtered = stringr::str_count(headers, "filter_low_pass")
     if(filtered < length(d)){warning("WARNING - pressure filter has not been applied for all profiles!") }
+    "par/sat/log'; consider using 'columns' to define this name"
 
       # insert data into data slot
     profiles$data = d
@@ -54,7 +58,7 @@ shinyServer(function(input, output, session) {
       # make a backup for use by revert
     profiles$original = d
       # make a summary of the positions for the map
-    profiles$positions = extract.metadata(profiles$data, c("filename", "startTime", "station", "longitude", "latitude", "cruise"))
+    profiles$positions = extract.oce.metadata(profiles$data, c("filename", "startTime", "station", "longitude", "latitude", "cruise"))
     profiles$global_metadata = netcdf.metadata(profiles$data, profiles$positions)
     profiles$global_metadata_default = profiles$global_metadata
     if(length(unique(profiles$positions$cruise)) > 1){warning("WARNING - Cruise ID differ between cnv files!")}
@@ -132,7 +136,8 @@ shinyServer(function(input, output, session) {
     # calculates smoothed decent rate from pressure (as per SBE data processing)
     prs = profiles$data[[input$select_profile]]@data[["pressure"]]
     decent_diff = c(0, diff(prs))
-    decent_calc = zoo::rollmean(decent_diff, 48, fill=NA, align="right")*24
+    decent_calc = zoo::rollmean(decent_diff, 48, fill=NA, align="right")*24 # for 9plus 2 second window
+    # decent_calc = zoo::rollmean(decent_diff, 8, fill=NA, align="right")*4 # for 19plus 2 second window
 
     profiles$data[[input$select_profile]]@data = lapply(profiles$data[[input$select_profile]]@data, function(x) {
       x[decent_calc < input$decent_threshold] = NA
@@ -313,11 +318,13 @@ shinyServer(function(input, output, session) {
   })
 
   observeEvent(input$secondCT, {
-    profiles$data[[input$select_profile]][["temperature"]] = profiles$data[[input$select_profile]][["temperature2"]]
-    profiles$data[[input$select_profile]][["conductivity"]] = profiles$data[[input$select_profile]][["conductivity2"]]
-    profiles$data[[input$select_profile]][["salinity"]] = profiles$data[[input$select_profile]][["salinity2"]]
-    profiles$data[[input$select_profile]][["salinityDifference"]] = 0
-    processingLog(profiles$data[[input$select_profile]]) = paste("Primary CT data replaced with that from secondary")
+    try({
+      profiles$data[[input$select_profile]][["temperature"]] = profiles$data[[input$select_profile]][["temperature2"]]
+      profiles$data[[input$select_profile]][["conductivity"]] = profiles$data[[input$select_profile]][["conductivity2"]]
+      profiles$data[[input$select_profile]][["salinity"]] = profiles$data[[input$select_profile]][["salinity2"]]
+      profiles$data[[input$select_profile]][["salinityDifference"]] = 0
+      processingLog(profiles$data[[input$select_profile]]) = paste("Primary CT data replaced with that from secondary")
+    })
   })
 
   ## Write out

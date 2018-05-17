@@ -136,7 +136,7 @@ getVolumesFast <- function (exclude){
   volumes
 }
 
-extract.metadata <- function(oce, vars){
+extract.oce.metadata <- function(oce, vars){
   # function for fetching metadata variables from oce object
     rbindlist(lapply(oce , function(x) `@`( x , metadata)[vars]))
 }
