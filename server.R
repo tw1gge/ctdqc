@@ -26,12 +26,12 @@ shinyServer(function(input, output, session) {
   observeEvent(input$read_files, {
    ## read data
     if(is.null(input$directory)){ # stop crashing when you missclick
-      warning("no folder selected")
+      showNotification("no folder selected!", type="error")
       return(NULL)
       }
     filelist = list.files(parseDirPath(volumes, input$directory), full.names = F, pattern = "*.cnv")
     if(length(filelist) == 0){ # don't crash if folder is empty
-      warning("no .cnv files found in directory")
+      showNotification("no .cnv files found in directory", type="error")
       return(NULL)
       }
     dir = parseDirPath(volumes, input$directory)
@@ -48,8 +48,7 @@ shinyServer(function(input, output, session) {
       # check if filter has been applied
     headers = extract.oce.metadata(d, "header")
     filtered = stringr::str_count(headers, "filter_low_pass")
-    if(filtered < length(d)){warning("WARNING - pressure filter has not been applied for all profiles!") }
-    "par/sat/log'; consider using 'columns' to define this name"
+    if(filtered < length(d)){showNotification("pressure filter has not been applied for all profiles!", duration=NULL, type="warning") }
 
       # insert data into data slot
     profiles$data = d
@@ -61,8 +60,8 @@ shinyServer(function(input, output, session) {
     profiles$positions = extract.oce.metadata(profiles$data, c("filename", "startTime", "station", "longitude", "latitude", "cruise"))
     profiles$global_metadata = netcdf.metadata(profiles$data, profiles$positions)
     profiles$global_metadata_default = profiles$global_metadata
-    if(length(unique(profiles$positions$cruise)) > 1){warning("WARNING - Cruise ID differ between cnv files!")}
-    if(length(unique(m)) != 1){ warning("WARNING - xml header differs between files") }
+    if(length(unique(profiles$positions$cruise)) > 1){showNotification("Cruise ID differ between cnv files!", duration=NULL, type="warning")}
+    if(length(unique(m)) != 1){ showNotification("xml header differs between files", type="warning", duration=NULL) }
   })
 
   observeEvent(input$read_bottle, {
@@ -151,7 +150,7 @@ shinyServer(function(input, output, session) {
         # find data which is all NA
       for(param in names(x@data)){
         if(all(is.na(x[[param]]))){
-          warning(paste("no data for", param))
+          showNotification(paste("no data for", param), type="warning")
           x[[param]] = NULL
         }
       }
@@ -300,7 +299,7 @@ shinyServer(function(input, output, session) {
       processingLog(profiles$data[[input$select_profile]]) = log
     }
     else{
-      warning("PAR has not been calculated")
+      showNotification("PAR has not been calculated, PAR not flagged", type="error", duration=NULL)
     }
   })
 
@@ -313,7 +312,7 @@ shinyServer(function(input, output, session) {
       processingLog(profiles$data[[input$select_profile]]) = log
     }
     else{
-      warning("PAR has not been calculated")
+      showNotification("PAR has not been calculated, Fluorometry not flagged", type="error", duration=NULL)
     }
   })
 
@@ -324,6 +323,7 @@ shinyServer(function(input, output, session) {
       profiles$data[[input$select_profile]][["salinity"]] = profiles$data[[input$select_profile]][["salinity2"]]
       profiles$data[[input$select_profile]][["salinityDifference"]] = 0
       processingLog(profiles$data[[input$select_profile]]) = paste("Primary CT data replaced with that from secondary")
+      showNotification("Primary CT data replaced with that from secondary")
     })
   })
 
