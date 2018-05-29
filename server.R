@@ -465,6 +465,7 @@ shinyServer(function(input, output, session) {
               zoom = 7)
   })
   output$datatable = renderDataTable({
+    validate(need(profiles$untrimmed, "data not loaded"))
     data.frame(profiles$untrimmed[[input$select_profile]]@data)
   })
   output$bottles = renderRHandsontable({
