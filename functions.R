@@ -149,7 +149,6 @@ parse_sbe_xml <- function(oce){
   hdr = substring(hdr, 2) # drop the '#'
   hdr = paste(hdr, collapse="\n") # unvector it
   hdr = xml2::read_xml(hdr)
-  hdr = xml2::as_list(hdr)
   return(hdr)
 }
 
@@ -158,8 +157,8 @@ netcdf.metadata <- function(d, positions){
   metadata = list()
   metadata[["id"]] = paste0("SBE_CTD_", paste(unique(positions$cruise), collapse="&"))
   metadata[["title"]] = paste("CTD profiles from", paste(unique(positions$cruise), collapse=", "))
-  metadata[["ncei_template_version"]] = "NCEI_NetCDF_TimeSeriesProfile_Orthogonal_Template_v2.0"
-  metadata[["featureType"]] = "timeSeriesProfile"
+  metadata[["ncei_template_version"]] = "NCEI_NetCDF_Profile_Orthogonal_Template_v2.0"
+  metadata[["featureType"]] = "profile"
   metadata[["summary"]] = ""
   metadata[["keywords"]] = ""
   metadata[["keywords_vocabluary"]] = "GCMD:GCMD Keywords"
@@ -167,7 +166,7 @@ netcdf.metadata <- function(d, positions){
   metadata[["naming_authority"]] = "uk.co.cefas"
   metadata[["history"]] = ""
   metadata[["source"]] = "CTD rossette system"
-  metadata[["processing_level"]] = "QC and processing done following Cefas SBE CTD QC SOP v1.2"
+  metadata[["processing_level"]] = paste0("QC and processing done following Cefas SBE CTD QC SOP v", CTDQC_version)
   metadata[["comment"]] = ""
   metadata[["acknowledgement"]] = ""
   metadata[["licence"]] = "OGLv3.0 https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
