@@ -7,7 +7,7 @@ library(rhandsontable, quietly=T)
 library(xml2, quietly=T)
 
 source("functions.R", local = T)
-CTDQC_version = "1.6"
+CTDQC_version = "2.0"
 editable_metadata = c("id", "title", "summary", "processing_level", "comment", "acknowledgment", "licence", "project", "creator", "creator_email")
 sensor_metadata = fread("sensor_table.csv")
 ctd_columns = list(
@@ -37,11 +37,12 @@ shinyServer(function(input, output, session) {
     dir = parseDirPath(volumes, input$directory)
     d = list()
     m = list()
+    h = list()
     withProgress(message = 'loading files...', value = 0, {
       for(i in filelist){
         # Increment the progress bar, and update the detail text.
         incProgress(1/length(filelist), detail = paste("loading", i))
-        d[[i]] = read.ctd.sbe(paste0(dir,"/",i), columns = ctd_columns)
+        d[[i]] = read.ctd.sbe(paste0(dir,"/",i), columns = ctd_columns) # oce data
         h[[i]] = parse_sbe_xml(d[[i]])
         m[[i]] = xml2::as_list(h[[i]])
       }
@@ -53,14 +54,15 @@ shinyServer(function(input, output, session) {
 
       # insert data into data slot
     profiles$data = d
+    profiles$header = h
     profiles$metadata = m
     profiles$untrimmed = d
-      # make a backup for use by revert
-    profiles$original = d
+    profiles$original = d # make a backup for use by revert
       # make a summary of the positions for the map
     profiles$positions = extract.oce.metadata(profiles$data, c("filename", "startTime", "station", "longitude", "latitude", "cruise"))
     profiles$global_metadata = netcdf.metadata(profiles$data, profiles$positions)
     profiles$global_metadata_default = profiles$global_metadata
+    profiles$CTDQC_version = CTDQC_version
     if(length(unique(profiles$positions$cruise)) > 1){showNotification("Cruise ID differ between cnv files!", duration=NULL, type="warning")}
     if(length(unique(m)) != 1){ showNotification("xml header differs between files", type="warning", duration=NULL) }
   })
@@ -108,13 +110,19 @@ shinyServer(function(input, output, session) {
     load(paste0(dir, "/CTDQC.rdata"))
       # copy data from loaded .rdata file to correct slots
     profiles$data = session$data
-    profiles$metadata = session$metadata
-    profiles$original = session$original
-    profiles$untrimmed = session$untrimmed
-    profiles$positions = session$positions
-    profiles$bottles = session$bottles
-    profiles$global_metadata = session$global_metadata
-    profiles$global_metadata_default = profiles$global_metadata
+    if(exists("header", where=session)){
+      profiles$metadata = session$metadata
+      profiles$original = session$original
+      profiles$untrimmed = session$untrimmed
+      profiles$positions = session$positions
+      profiles$bottles = session$bottles
+      profiles$global_metadata = session$global_metadata
+      profiles$global_metadata_default = profiles$global_metadata
+
+    }else{
+        showNotification("CTDQC error", type="error")
+        warning("CTDQC error")
+    }
   })
 
   ## Processes
