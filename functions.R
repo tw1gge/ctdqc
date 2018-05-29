@@ -152,6 +152,23 @@ parse_sbe_xml <- function(oce){
   return(hdr)
 }
 
+calc_descent_rate <- function(oce){
+  if(!exists("descentRate", where=oce@data)){
+    prs = oce@data[["pressure"]]
+    d_prs = c(0, diff(prs))
+    if(oce@metadata$model == "19plus v2" & oce@metadata$sampleInterval == 0.25){
+      descentRate = zoo::rollmean(d_prs, 8, fill=NA, align="right")*4 # for 19plus 2 second window
+    }
+    if(oce@metadata$model == "9" & oce@metadata$sampleInterval < 0.042){
+      descentRate = zoo::rollmean(d_prs, 48, fill=NA, align="right")*24 # for 9plus 2 second window
+    }else{
+      warning("SBE model not recognised")
+    }
+    oce@data[["descentRate"]] = descentRate
+  }
+  return(oce)
+}
+
 netcdf.metadata <- function(d, positions){
   # generates metadata from file
   metadata = list()

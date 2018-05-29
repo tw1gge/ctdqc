@@ -57,7 +57,7 @@ shinyUI(fluidPage(
                  actionButton('trim', "Trim", icon=icon("scissors")),
                  actionButton('autotrim', "Autotrim", icon=icon("scissors")),
                  actionButton('remove_pressure_inversions', "Remove pressure inversions", icon=icon("angle-double-down")),
-                 numericInput('decent_threshold', "decent rate threshold", value=0.0)
+                 numericInput('decent_threshold', "minimum decent rate threshold (m/s)", value=0.15, step=0.05)
                  ),
         tabPanel("Profile Plot",
                  fluidRow(

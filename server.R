@@ -43,6 +43,7 @@ shinyServer(function(input, output, session) {
         # Increment the progress bar, and update the detail text.
         incProgress(1/length(filelist), detail = paste("loading", i))
         d[[i]] = read.ctd.sbe(paste0(dir,"/",i), columns = ctd_columns) # oce data
+        d[[i]] = calc_descent_rate(d[[i]])
         h[[i]] = parse_sbe_xml(d[[i]])
         m[[i]] = xml2::as_list(h[[i]])
       }
