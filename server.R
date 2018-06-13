@@ -50,8 +50,15 @@ shinyServer(function(input, output, session) {
     })
       # check if filter has been applied
     headers = extract.oce.metadata(d, "header")
-    filtered = stringr::str_count(headers, "filter_low_pass")
-    if(filtered < length(d)){showNotification("pressure filter has not been applied for all profiles!", duration=NULL, type="warning") }
+    if(stringr::str_count(headers, "filter_low_pass_[AB]_vars = prDM") < length(d)){
+      showNotification("pressure filter has not been applied for all profiles!", duration=NULL, type="warning")
+      }
+    if(stringr::str_count(headers, "celltm_date") < length(d)){
+      showNotification("Cell thermal mass correction has not been applied for all profiles!", duration=NULL, type="warning")
+      }
+    if(stringr::str_count(headers, "Derive_date") < length(d)){
+      showNotification("Derived variables hve not been calculated for all profiles!", duration=NULL, type="warning")
+      }
 
       # insert data into data slot
     profiles$data = d
