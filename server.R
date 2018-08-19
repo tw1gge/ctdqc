@@ -5,6 +5,10 @@ library(data.table, quietly=T)
 library(leaflet, quietly=T)
 library(rhandsontable, quietly=T)
 library(xml2, quietly=T)
+library(stringr, quietly=T)
+library(zoo, quietly=T)
+library(lubridate, quietly=T)
+library(uuid, quietly=T)
 
 source("functions.R", local = T)
 CTDQC_version = "2.0"
@@ -70,7 +74,6 @@ shinyServer(function(input, output, session) {
     profiles$positions = extract.oce.metadata(profiles$data, c("filename", "startTime", "station", "longitude", "latitude", "cruise"))
     profiles$global_metadata = netcdf.metadata(profiles$data, profiles$positions)
     profiles$global_metadata_default = profiles$global_metadata
-    profiles$CTDQC_version = CTDQC_version
     if(length(unique(profiles$positions$cruise)) > 1){showNotification("Cruise ID differ between cnv files!", duration=NULL, type="warning")}
     if(length(unique(m)) != 1){ showNotification("xml header differs between files", type="warning", duration=NULL) }
   })
@@ -89,10 +92,14 @@ shinyServer(function(input, output, session) {
         # matching
         botfile = gsub(".cnv", ".bl", i)
         if(botfile %in% bottlelist){
-          scans = cbind(i, read.csv(paste0(dir,"/",botfile), skip = 2, header = F))
-          colnames(scans) = c("profile", "fire_seq", "niskin", "dateTime", "start_scan", "end_scan")
+          # check for no-bottles-fired
+          botfile = paste0(dir,"/",botfile)
+          if(length(readLines(botfile)) > 2){
+            scans = cbind(i, read.csv(botfile, skip = 2, header = F))
+            colnames(scans) = c("profile", "fire_seq", "niskin", "dateTime", "start_scan", "end_scan")
+            b[[i]] = scans
+          }
         }
-        b[[i]] = scans
       }
     })
     scans = data.table(rbindlist(b))
@@ -116,21 +123,23 @@ shinyServer(function(input, output, session) {
   observeEvent(input$read_rdata,{
     dir = parseDirPath(volumes, input$directory)
     load(paste0(dir, "/CTDQC.rdata"))
-      # copy data from loaded .rdata file to correct slots
-    profiles$data = session$data
-    if(exists("header", where=session)){
+      # check CTDQC.rdata is valid
+    if(exists("CTDQC_version", where=session)){
+      showNotification("TODO metadata update", type="error")
+      profiles$data = session$data
+      profiles$header = session$header
       profiles$metadata = session$metadata
-      profiles$original = session$original
       profiles$untrimmed = session$untrimmed
+      profiles$original = session$original
       profiles$positions = session$positions
-      profiles$bottles = session$bottles
       profiles$global_metadata = session$global_metadata
-      profiles$global_metadata_default = profiles$global_metadata
-
-    }else{
+      profiles$global_metadata_default = profiles$global_metadata}
+    else{
         showNotification("CTDQC error", type="error")
         warning("CTDQC error")
     }
+    # copy data from loaded .rdata file to correct slots
+    profiles$data = session$data
   })
 
   ## Processes
@@ -349,12 +358,16 @@ shinyServer(function(input, output, session) {
   observeEvent(input$write_rdata,{
     dir = parseDirPath(volumes, input$directory)
     session = list()
+    # 7 + 1 items
     session$data = profiles$data
+    session$header = profiles$header
+    session$metadata = profiles$metadata
     session$untrimmed = profiles$untrimmed
     session$original = profiles$original
     session$positions = profiles$positions
     session$global_metadata = profiles$global_metadata
-    session$metadata = profiles$metadata
+    session$global_metadata_default = profiles$global_metadata
+    session$CTDQC_version = CTDQC_version
     if(!is.null(profiles$bottles)){
       session$bottles = profiles$bottles
     }
