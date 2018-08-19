@@ -53,7 +53,7 @@ shinyServer(function(input, output, session) {
       }
     })
       # check if filter has been applied
-    headers = extract.oce.metadata(d, "header")
+    headers = paste(extract.oce.metadata(d, "header"), collapse = ",")
     if(stringr::str_count(headers, "filter_low_pass_[AB]_vars = prDM") < length(d)){
       showNotification("pressure filter has not been applied for all profiles!", duration=NULL, type="warning")
       }
