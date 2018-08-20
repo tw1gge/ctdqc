@@ -1,13 +1,13 @@
-﻿,parameter,variable,instid,sensor_name,sensor_nodc,sensor_make,long_name,standard_name,units,precision,_fillValue,valid_min,valid_max
-,temperature,temperature,inst_temp,pumped temperature sensor,CTD,SBE 3plus,"Water temperature, IPTS-90",sea_water_temperature,degree_Celsius,,-99999,-2.5,45
-,conductivity,conductivity,inst_cond,pumped conductivity cell,CTD,SBE 4C,Water conductivity,sea_water_electrical_conductivty,S m-1,0.00004,-99999,0,7
-,salinity,salinity,inst_sal,pumped CTD,CTD,SBE 9plus,Practical Salinity,sea_water_practical_salinity,1e-3,,-99999,0,36
-,pressure,pressure,inst_prs,pumped CTD,CTD,SBE 9plus,Practical Salinity,sea_water_pressure,dbar,,-99999,0,42000
-,altimeter,altimeter,inst_alt,sonar altimeter,altimeter,Teledyne/Benthos PSA-916,height above sea floor (altimeter),height_above_sea_floor,m,,-99999,1,100
-,turbidity,turbidity,inst_turb,Optical backscatter,turbidity meter,Seapoint STM,Turbidity expressed as NTU/FTU (Nephelometric Turbidity Units),sea_water_turbidity,1,,-99999,0.01,750
-,fluorescence,fluorescence,inst_flu,chlorophyll fluorometer,fluorometer,Seapoint SCF,fluoroscence,,1,,-99999,,
-,oxygen_RINKO,oxygen,inst_oxy,,,,,,,,-99999,,
-,oxygen_optode,oxygen2,inst_oxy2,,,,,,,,-99999,,
-,par,par,inst_par,Photosynthetically Active Radiation Sensor,PAR sensor,Licor Li-192 with Cefas low light amplifier,Photosynthetically Active Radiation (PAR),downwelling_photosynthetic_photon_flux_in_sea_water,mol m-2 s-1,,-99999,0.0001,10
-,spm,spm,inst_turb,,,,,,,0.1,-99999,,
-,chlorophyll,chlorophyll,inst_flu,,,,,,,,-99999,,
+parameter	variable	instid	sensor_name	sensor_nodc	sensor_make	long_name	standard_name	units	precision	_fillValue	valid_min	valid_max
+temperature	temperature	inst_temp	pumped temperature sensor	CTD	SBE 3plus	"Water temperature, IPTS-90"	sea_water_temperature	degree_Celsius		-99999	-2.5	45
+conductivity	conductivity	inst_cond	pumped conductivity cell	CTD	SBE 4C	Water conductivity	sea_water_electrical_conductivty	S m-1	0.00004	-99999	0	7
+salinity	salinity	inst_sal	pumped CTD	CTD	SBE 9plus	Practical Salinity	sea_water_practical_salinity	1.00E-03		-99999	0	36
+pressure	pressure	inst_prs	pumped CTD	CTD	SBE 9plus	Practical Salinity	sea_water_pressure	dbar		-99999	0	42000
+altimeter	altimeter	inst_alt	sonar altimeter	altimeter	Teledyne/Benthos PSA-916	Height above sea floor (altimeter)	height_above_sea_floor	m		-99999	1	100
+turbidity	turbidity	inst_turb	optical backscatter	turbidity meter	Seapoint STM	Turbidity expressed as NTU/FTU (Nephelometric Turbidity Units)	sea_water_turbidity	1		-99999	0.01	750
+fluorescence	fluorescence	inst_flu	chlorophyll fluorometer	fluorometer	Seapoint SCF	fluoroscence		1		-99999		
+oxygen_RINKO	oxygen	inst_oxy	oxygen optode	oxygen meter	RINKO III	Dissolved oxygen	mole_concentration_of_dissolved_molecular_oxygen_in_sea_water	mmol m-3		-99999		
+oxygen_optode	oxygen2	inst_oxy2	oxygen optode	oxygen meter	Aanderaa 4880	Dissolved oxygen	mole_concentration_of_dissolved_molecular_oxygen_in_sea_water	mmol m-3		-99999		
+par	par	inst_par	Photosynthetically Active Radiation Sensor	PAR sensor	Licor Li-192 with Cefas low light amplifier	Photosynthetically Active Radiation (PAR)	downwelling_photosynthetic_photon_flux_in_sea_water	mol m-2 s-1		-99999	0.0001	10
+spm	spm	inst_turb	optical backscatter	turbidity meter	Seapoint STM	Suspended Particulate Matter		g m-3	0.1	-99999	0	100
+chlorophyll	chlorophyll	inst_flu	chlorophyll fluorometer	fluorometer	Seapoint SCF	Chlorophyll	chlorophyll_concentration_in_sea_water	mg m-3	0.1	-99999	0	150
