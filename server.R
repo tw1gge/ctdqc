@@ -423,18 +423,26 @@ shinyServer(function(input, output, session) {
     updateSelectInput(session, "select_profile", choices = names(profiles$original))
     })
   observe({
-    # workaround for oce function not liking null data
-      if(!is.null(profiles$data[[input$select_profile]])){
-        choices = names(profiles$data[[input$select_profile]]@data)
-        if("salinity" %in% choices){default_x1 = "salinity"}else{default_x1 = NULL}
-        if("temperature" %in% choices){default_x2 = "temperature"}else{default_x2 = NULL}
-        if("pressure" %in% choices){default_y = "pressure"}else{default_y = NULL}
-        updateSelectInput(session, "x1", choices = choices, selected = default_x1)
-        updateSelectInput(session, "x2", choices = choices, selected = default_x2)
-        updateSelectInput(session, "y", choices = choices, selected = default_y)
-        updateSelectInput(session, "select_factor", choices = choices)
-        updateSelectInput(session, "select_flag", choices = choices)
-      }
+      validate(need(!is.null(profiles$data[[input$select_profile]]), "Data not loaded"))
+      choices = names(profiles$data[[input$select_profile]]@data)
+
+      input_x1_prev = isolate(input$x1)
+      input_x2_prev = isolate(input$x2)
+      input_y_prev = isolate(input$y)
+
+      if("salinity" %in% choices){default_x1 = "salinity"}else{default_x1 = NULL}
+      if("temperature" %in% choices){default_x2 = "temperature"}else{default_x2 = NULL}
+      if("pressure" %in% choices){default_y = "pressure"}else{default_y = NULL}
+
+      if(input_x1_prev %in% choices){default_x1 = input_x1_prev}
+      if(input_x2_prev %in% choices){default_x2 = input_x2_prev}
+      if(input_y_prev %in% choices){default_y = input_y_prev}
+
+      updateSelectInput(session, "x1", choices = choices, selected = default_x1)
+      updateSelectInput(session, "x2", choices = choices, selected = default_x2)
+      updateSelectInput(session, "y", choices = choices, selected = default_y)
+      updateSelectInput(session, "select_factor", choices = choices)
+      updateSelectInput(session, "select_flag", choices = choices)
     })
   observe({
     updateSelectInput(session, "optode_foil", choices = unique(optode_coefs$batch), selected = "1707")
@@ -444,14 +452,12 @@ shinyServer(function(input, output, session) {
 
   output$summary <- renderPrint({
     # workaround for oce function not liking null data
-    if(!is.null(profiles$data[[input$select_profile]]))
+    validate(need(!is.null(profiles$data[[input$select_profile]]), "Data not loaded"))
     summary(profiles$data[[input$select_profile]])
     })
   output$xml <- renderText({
-    # workaround for oce function not liking null data
-    if(!is.null(profiles$data[[input$select_profile]])){
-      paste(profiles$data[[input$select_profile]]@metadata$header, collapse="\n")
-    }
+    validate(need(!is.null(profiles$data[[input$select_profile]]), "Data not loaded"))
+    paste(profiles$data[[input$select_profile]]@metadata$header, collapse="\n")
     })
   output$scan_plot = renderPlot({
       # check if there is data, give warning if not
@@ -465,28 +471,24 @@ shinyServer(function(input, output, session) {
     abline(v = input$trim_scans)
     })
   output$profile_plot = renderPlot({
-    # workaround for plot function not liking null data
-      if(!is.null(profiles$data[[input$select_profile]])){
-        # extract data from nested S4 objects (CTD)
-        x1 = profiles$data[[input$select_profile]]@data[[input$x1]]
-        x2 = profiles$data[[input$select_profile]]@data[[input$x2]]
-        y = profiles$data[[input$select_profile]]@data[[input$y]]
-        ylim = rev(range(y, na.rm=T))
-        plot(x = x2, y = y, type = "l", ylim = ylim, xlab = input$x2, ylab = input$y, col = "red")
-        par(new = T)
-        plot(x = x1, y = y, type = "l", ylim = ylim, axes = F, xlab = NA, ylab = NA, col = "blue")
-        axis(side = 3)
-        mtext(input$x1, side = 3, line = 3)
-      }
+      validate(need(!is.null(profiles$data[[input$select_profile]]), "Data not loaded"))
+      # extract data from nested S4 objects (CTD)
+      x1 = profiles$data[[input$select_profile]]@data[[input$x1]]
+      x2 = profiles$data[[input$select_profile]]@data[[input$x2]]
+      y = profiles$data[[input$select_profile]]@data[[input$y]]
+      ylim = rev(range(y, na.rm=T))
+      plot(x = x2, y = y, type = "l", ylim = ylim, xlab = input$x2, ylab = input$y, col = "red")
+      par(new = T)
+      plot(x = x1, y = y, type = "l", ylim = ylim, axes = F, xlab = NA, ylab = NA, col = "blue")
+      axis(side = 3)
+      mtext(input$x1, side = 3, line = 3)
     })
   output$TS_plot = renderPlot({
-    # workaround for plot function not liking null data
-    if(!is.null(profiles$data[[input$select_profile]]))
+    validate(need(!is.null(profiles$data[[input$select_profile]]), "Data not loaded"))
     plotTS(profiles$data[[input$select_profile]])
     })
   output$map = renderLeaflet({
-    # workaround for oce function not liking null data
-    if(!is.null(profiles$data[[input$select_profile]]))
+    validate(need(!is.null(profiles$data[[input$select_profile]]), "Data not loaded"))
     leaflet(profiles$positions) %>%
       addTiles() %>%
       addMarkers(~longitude, ~latitude, popup = ~paste("Station", station,"\r", "@", startTime)) %>%
