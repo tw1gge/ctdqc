@@ -9,6 +9,7 @@ library(stringr, quietly=T)
 library(zoo, quietly=T)
 library(lubridate, quietly=T)
 library(uuid, quietly=T)
+library(ggplot2, quietly=T)
 
 source("functions.R", local = T)
 CTDQC_version = "2.0"
@@ -52,7 +53,7 @@ shinyServer(function(input, output, session) {
         m[[i]] = xml2::as_list(h[[i]])
       }
     })
-      # check if filter has been applied
+      # check if processing steps have been completed
     headers = paste(extract.oce.metadata(d, "header"), collapse = ",")
     if(stringr::str_count(headers, "filter_low_pass_[AB]_vars = prDM") < length(d)){
       showNotification("pressure filter has not been applied for all profiles!", duration=NULL, type="warning")
@@ -214,6 +215,10 @@ shinyServer(function(input, output, session) {
       processingLog(x) = log
       return(x)
     })
+  })
+
+  observeEvent(input$apply_filter,{
+    # TODO
   })
 
   observeEvent(input$calc_flu,{
@@ -439,6 +444,7 @@ shinyServer(function(input, output, session) {
       if(input_y_prev %in% choices){default_y = input_y_prev}
 
       updateSelectInput(session, "x1", choices = choices, selected = default_x1)
+      updateSelectInput(session, "filter_x1", choices = choices, selected = default_x1)
       updateSelectInput(session, "x2", choices = choices, selected = default_x2)
       updateSelectInput(session, "y", choices = choices, selected = default_y)
       updateSelectInput(session, "select_factor", choices = choices)
@@ -483,6 +489,20 @@ shinyServer(function(input, output, session) {
       axis(side = 3)
       mtext(input$x1, side = 3, line = 3)
     })
+  output$filter_plot = renderPlot({
+    validate(need(!is.null(profiles$untrimmed[[input$select_profile]]), "Data not loaded"))
+    d = as.data.table(profiles$untrimmed[[input$select_profile]]@data)
+    d[, cast := "up"]
+    d[scan < min(d[pressure == max(pressure)]$scan), cast := "down"] # split casts
+    d[scan < min(d[pumpStatus == 1]$scan) + 50, pumpStatus := 0] # flag extra scans after pump on
+    d = melt.data.table(d, id.vars = c("scan", "time", "pumpStatus", "flag", "pressure", "cast", "descentRate"))
+
+    ggplot(d[-1 & variable == input$filter_x1 & pumpStatus == 1]) +
+      geom_path(aes(value, pressure, color=cast)) +
+      scale_y_reverse() +
+      theme_bw() + theme(legend.position = "top")
+
+  })
   output$TS_plot = renderPlot({
     validate(need(!is.null(profiles$data[[input$select_profile]]), "Data not loaded"))
     plotTS(profiles$data[[input$select_profile]])

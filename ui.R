@@ -43,7 +43,6 @@ shinyUI(fluidPage(
       tableOutput("progress")
       ),
 
-    # Show a plot of the generated distribution
     mainPanel(width = 8,
       tabsetPanel(
         tabPanel("Summary",
@@ -81,6 +80,18 @@ shinyUI(fluidPage(
                  tableOutput("bottle_coef")
                  ),
         tabPanel("TS Plot", plotOutput("TS_plot")),
+        tabPanel("Filter Plot",
+                 fluidRow(
+                   column(3, selectInput("filter_x1", "Parameter", choices = NULL)),
+                   column(3, numericInput('filter_t', label="time constant (s)", value=0.15, step=0.01)),
+                   column(6,
+                     br(),
+                     actionButton('prev_filter', "Preview filter", icon=icon("flag")),
+                     actionButton('apply_filter', "Apply filter", icon=icon("flag"))
+                     )
+                   ),
+                 plotOutput("filter_plot", height="600px")
+                 ),
         tabPanel("Table", dataTableOutput("datatable")),
         tabPanel("Map", leafletOutput("map")),
         tabPanel("Sensors",
@@ -177,6 +188,7 @@ shinyUI(fluidPage(
           ),
         tabPanel("Bottles",
           rHandsontableOutput("bottles"),
+          br(),
           fluidRow(
             h4("CTD / Niskin regressions"),
             selectInput("Plot_bottle_select", NULL, choices = c("Select parameter" = "", "Salinity", "Oxygen Optode", "Oxygen RINKO", "Chlorophyll")),
