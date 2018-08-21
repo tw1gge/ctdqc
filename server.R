@@ -49,6 +49,7 @@ shinyServer(function(input, output, session) {
         incProgress(1/length(filelist), detail = paste("loading", i))
         d[[i]] = read.ctd.sbe(paste0(dir,"/",i), columns = ctd_columns) # oce data
         d[[i]] = calc_descent_rate(d[[i]])
+        d[[i]] = flag_extra_pump(d[[i]], 100)
         h[[i]] = parse_sbe_xml(d[[i]])
         m[[i]] = xml2::as_list(h[[i]])
       }
@@ -215,10 +216,6 @@ shinyServer(function(input, output, session) {
       processingLog(x) = log
       return(x)
     })
-  })
-
-  observeEvent(input$apply_filter,{
-    # TODO
   })
 
   observeEvent(input$calc_flu,{
@@ -421,6 +418,26 @@ shinyServer(function(input, output, session) {
     write.ctd.netcdf(profiles, sensor_metadata)
   })
 
+  observeEvent(input$prev_filter, {
+    time_constant = input$filter_t
+    sample_rate = 24
+    Wn = (1 / time_constant) / (sample_rate * 2)
+    flt = signal::butter(2, Wn, "low")
+    var = profiles$untrimmed[[input$select_profile]]@data[[input$filter_x1]]
+    profiles$prev_filter = signal::filtfilt(flt, var)
+  })
+
+  observeEvent(input$apply_filter, {
+    time_constant = input$filter_t
+    sample_rate = 24
+    Wn = (1 / time_constant) / (sample_rate * 2)
+    flt = signal::butter(2, Wn, "low")
+    untrimmed = signal::filtfilt(flt, profiles$untrimmed[[input$select_profile]]@data[[input$filter_x1]])
+    profiles$untrimmed[[input$select_profile]]@data[[input$filter_x1]] = untrimmed
+    data_ = signal::filtfilt(flt, profiles$data[[input$select_profile]]@data[[input$filter_x1]])
+    profiles$data[[input$select_profile]]@data[[input$filter_x1]] = data_
+  })
+
 
   ## Ui and controls
     # update select input when filelist changes
@@ -453,6 +470,11 @@ shinyServer(function(input, output, session) {
   observe({
     updateSelectInput(session, "optode_foil", choices = unique(optode_coefs$batch), selected = "1707")
     })
+  observe({
+    validate(need(!is.null(profiles$data[[input$select_profile]]), "Data not loaded"))
+    max_prs = max(profiles$untrimmed[[input$select_profile]]@data[["pressure"]])
+    updateSliderInput(session, "filter_scale", max = max_prs, min=0, value = c(0, max_prs), step=)
+  })
 
   ## Output
 
@@ -491,17 +513,18 @@ shinyServer(function(input, output, session) {
     })
   output$filter_plot = renderPlot({
     validate(need(!is.null(profiles$untrimmed[[input$select_profile]]), "Data not loaded"))
-    d = as.data.table(profiles$untrimmed[[input$select_profile]]@data)
-    d[, cast := "up"]
-    d[scan < min(d[pressure == max(pressure)]$scan), cast := "down"] # split casts
-    d[scan < min(d[pumpStatus == 1]$scan) + 50, pumpStatus := 0] # flag extra scans after pump on
-    d = melt.data.table(d, id.vars = c("scan", "time", "pumpStatus", "flag", "pressure", "cast", "descentRate"))
-
-    ggplot(d[-1 & variable == input$filter_x1 & pumpStatus == 1]) +
-      geom_path(aes(value, pressure, color=cast)) +
-      scale_y_reverse() +
-      theme_bw() + theme(legend.position = "top")
-
+    # validate(need(!is.null(input$filter_x1, "Select variable")))
+    var = profiles$untrimmed[[input$select_profile]]@data[[input$filter_x1]]
+    scan = profiles$untrimmed[[input$select_profile]]@data[["scans"]]
+    prs = profiles$untrimmed[[input$select_profile]]@data[["pressure"]]
+    pump = profiles$untrimmed[[input$select_profile]]@data[["pumpStatus"]]
+    if(any(pump == 1)){
+      ylim = c(input$filter_scale[2], input$filter_scale[1])
+      plot(x = var[pump == 1], y = prs[pump == 1], ylim=ylim, type = "l", xlab=NA, ylab=NA)
+    }
+    if(!is.null(profiles$prev_filter)){
+      lines(x = profiles$prev_filter[pump == 1], y = prs[pump == 1], type="l", col="red")
+    }
   })
   output$TS_plot = renderPlot({
     validate(need(!is.null(profiles$data[[input$select_profile]]), "Data not loaded"))

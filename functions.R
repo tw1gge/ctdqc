@@ -205,6 +205,18 @@ netcdf.metadata <- function(d, positions){
   return(metadata)
 }
 
+flag_extra_pump <- function(oce, scans=50){
+  if(exists("pumpStatus", where=oce@data)){
+    pumpStatus = oce@data[["pumpStatus"]]
+    scan = oce@data[["scan"]]
+    if(any(pumpStatus == 1)){
+      pumpStatus[1:min(scan[pumpStatus == 1]) + scans] = 0
+    }
+    oce@data[["pumpStatus"]] = pumpStatus
+  }
+  return(oce)
+}
+
 write.ctd.netcdf <- function(session, sensor_metadata){
   require(RNetCDF)
   require(uuid)

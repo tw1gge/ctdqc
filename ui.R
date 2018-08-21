@@ -87,7 +87,8 @@ shinyUI(fluidPage(
                    column(6,
                      br(),
                      actionButton('prev_filter', "Preview filter", icon=icon("flag")),
-                     actionButton('apply_filter', "Apply filter", icon=icon("flag"))
+                     actionButton('apply_filter', "Apply filter", icon=icon("flag")),
+                     sliderInput("filter_scale", "Scale", min=0, max=1, value=c(0, 1))
                      )
                    ),
                  plotOutput("filter_plot", height="600px")
