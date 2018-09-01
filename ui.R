@@ -40,7 +40,7 @@ shinyUI(fluidPage(
       h4("Progress"),
       actionButton('mark_complete_QC2', "Mark QC2 done", icon=icon("check-square")),
       actionButton('mark_complete_all', "Mark All QC complete", icon=icon("check-square")),
-      tableOutput("progress")
+      DT::dataTableOutput("progress")
       ),
 
     mainPanel(width = 8,
