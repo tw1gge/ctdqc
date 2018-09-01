@@ -466,11 +466,6 @@ shinyServer(function(input, output, session) {
   observe({
     updateSelectInput(session, "optode_foil", choices = unique(optode_coefs$batch), selected = "1707")
     })
-  observe({
-    validate(need(!is.null(profiles$data[[input$select_profile]]), "Data not loaded"))
-    max_prs = max(profiles$untrimmed[[input$select_profile]]@data[["pressure"]])
-    updateSliderInput(session, "filter_scale", max = max_prs, min=0, value = c(0, max_prs), step=)
-  })
 
   ## Output
 
@@ -512,20 +507,31 @@ shinyServer(function(input, output, session) {
       axis(side = 3)
       mtext(input$x1, side = 3, line = 3)
     })
+  filter_plot_ranges = reactiveValues(x=NULL, y=NULL)
+  observeEvent(input$filter_plot_dblclick, {
+    if(!is.null(input$filter_plot_brush)){
+      filter_plot_ranges$x = c(input$filter_plot_brush$xmin, input$filter_plot_brush$xmax)
+      filter_plot_ranges$y = c(input$filter_plot_brush$ymin, input$filter_plot_brush$ymax)
+
+    }else{
+      filter_plot_ranges$x = NULL
+      filter_plot_ranges$y = NULL
+    }
+  })
   output$filter_plot = renderPlot({
     validate(need(!is.null(profiles$untrimmed[[input$select_profile]]), "Data not loaded"))
-    # validate(need(!is.null(input$filter_x1, "Select variable")))
-    var = profiles$untrimmed[[input$select_profile]]@data[[input$filter_x1]]
-    scan = profiles$untrimmed[[input$select_profile]]@data[["scans"]]
-    prs = profiles$untrimmed[[input$select_profile]]@data[["pressure"]]
-    pump = profiles$untrimmed[[input$select_profile]]@data[["pumpStatus"]]
-    if(any(pump == 1)){
-      ylim = c(input$filter_scale[2], input$filter_scale[1])
-      plot(x = var[pump == 1], y = prs[pump == 1], ylim=ylim, type = "l", xlab=NA, ylab=NA)
-    }
+    pd = as.data.table(profiles$untrimmed[[input$select_profile]]@data)
     if(!is.null(profiles$prev_filter)){
-      lines(x = profiles$prev_filter[pump == 1], y = prs[pump == 1], type="l", col="red")
+      pd[, filter := profiles$prev_filter]
+    }else{
+      pd[, filter := NaN] # so ggplot won't plot it
     }
+    ggplot(pd[pumpStatus == 1]) +
+      geom_path(aes(time, filter), color="red") +
+      geom_path(aes(time, get(input$filter_x1)), alpha=0.5) +
+      theme_bw() +
+      labs(x="time (seconds)", y=input$filter_x1) +
+      coord_cartesian(xlim = filter_plot_ranges$x, ylim = filter_plot_ranges$y, expand=F)
   })
   output$TS_plot = renderPlot({
     validate(need(!is.null(profiles$data[[input$select_profile]]), "Data not loaded"))

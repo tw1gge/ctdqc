@@ -87,11 +87,10 @@ shinyUI(fluidPage(
                    column(6,
                      br(),
                      actionButton('prev_filter', "Preview filter", icon=icon("flag")),
-                     actionButton('apply_filter', "Apply filter", icon=icon("flag")),
-                     sliderInput("filter_scale", "Scale", min=0, max=1, value=c(0, 1))
+                     actionButton('apply_filter', "Apply filter", icon=icon("flag"))
                      )
                    ),
-                 plotOutput("filter_plot", height="600px")
+                 plotOutput("filter_plot", height="600px", dblclick="filter_plot_dblclick", brush= brushOpts(id="filter_plot_brush", resetOnNew=T))
                  ),
         tabPanel("Table", dataTableOutput("datatable")),
         tabPanel("Map", leafletOutput("map")),
