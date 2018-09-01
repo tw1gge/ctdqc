@@ -34,7 +34,7 @@ shinyServer(function(input, output, session) {
       showNotification("no folder selected!", type="error")
       return(NULL)
       }
-    filelist = list.files(parseDirPath(volumes, input$directory), full.names = F, pattern = "*.cnv")
+    filelist = list.files(parseDirPath(volumes, input$directory), recursive=T, full.names = F, pattern = "*.cnv")
     if(length(filelist) == 0){ # don't crash if folder is empty
       showNotification("no .cnv files found in directory", type="error")
       return(NULL)
@@ -43,15 +43,17 @@ shinyServer(function(input, output, session) {
     d = list()
     m = list()
     h = list()
+    config = list()
     withProgress(message = 'loading files...', value = 0, {
       for(i in filelist){
         # Increment the progress bar, and update the detail text.
         incProgress(1/length(filelist), detail = paste("loading", i))
+        print(i)
         d[[i]] = read.ctd.sbe(paste0(dir,"/",i), columns = ctd_columns) # oce data
         d[[i]] = calc_descent_rate(d[[i]])
         d[[i]] = flag_extra_pump(d[[i]], 100)
         h[[i]] = parse_sbe_xml(d[[i]])
-        m[[i]] = xml2::as_list(h[[i]])
+        config[[i]] = extract.xml_channel_config(h[[i]])
       }
     })
       # check if processing steps have been completed
@@ -69,7 +71,7 @@ shinyServer(function(input, output, session) {
       # insert data into data slot
     profiles$data = d
     profiles$header = h
-    profiles$metadata = m
+    profiles$config = config
     profiles$untrimmed = d
     profiles$original = d # make a backup for use by revert
       # make a summary of the positions for the map
@@ -130,7 +132,7 @@ shinyServer(function(input, output, session) {
       showNotification("TODO metadata update", type="error")
       profiles$data = session$data
       profiles$header = session$header
-      profiles$metadata = session$metadata
+      profiles$config = session$config
       profiles$untrimmed = session$untrimmed
       profiles$original = session$original
       profiles$positions = session$positions
@@ -250,11 +252,6 @@ shinyServer(function(input, output, session) {
       optode_oxygen = optode.phaseCalc(optode_Dphase, optode_temperature, subset(optode_coefs, batch == input$optode_foil))
       optode_oxygen = optode.correction(optode_oxygen, optode_temperature, salinity, depth)
       # add to untrimmed
-
-      # profiles$untrimmed[[i]] = oceSetData(profiles$untrimmed[[i]], "par", licor_par,
-      #                                      unit = list(unit=expression(umol~s-1~m-2), scale = "PAR/Irradiance, Cefas Licor PAR"))
-
-
       profiles$untrimmed[[i]] = oceSetData(profiles$untrimmed[[i]], "temperature_optode", optode_temperature,
                                              unit = list(unit=expression(degree*C), scale="Optode"))
       profiles$untrimmed[[i]] = oceSetData(profiles$untrimmed[[i]], "oxygen_optode", optode_oxygen,
@@ -363,7 +360,7 @@ shinyServer(function(input, output, session) {
     # 7 + 1 items
     session$data = profiles$data
     session$header = profiles$header
-    session$metadata = profiles$metadata
+    session$config = profiles$config
     session$untrimmed = profiles$untrimmed
     session$original = profiles$original
     session$positions = profiles$positions
@@ -487,6 +484,11 @@ shinyServer(function(input, output, session) {
     validate(need(!is.null(profiles$data[[input$select_profile]]), "Data not loaded"))
     paste(profiles$data[[input$select_profile]]@metadata$header, collapse="\n")
     })
+  output$config <- renderTable({
+    validate(need(!is.null(profiles$data[[input$select_profile]]), "Data not loaded"))
+    profiles$config[[input$select_profile]]
+
+  })
   output$scan_plot = renderPlot({
       # check if there is data, give warning if not
     validate(need(!is.null(profiles$data[[input$select_profile]]), "Data not loaded"))

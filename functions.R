@@ -161,6 +161,27 @@ parse_sbe_xml <- function(oce){
   return(hdr)
 }
 
+extract.xml_channel_config <- function(sbe_xml){
+  # takes output of parse_sbe_xml and returns table of channels
+  channel = xml_find_all(sbe_xml, "//sensor/@Channel")
+  config = list()
+  for(i in xml_integer(channel)){
+    name = xml_text(xml_find_all(sbe_xml, paste0("//sensor[@Channel=",i,"]/comment()")))
+    sen = xml_find_first(sbe_xml, paste0("//sensor[@Channel=",i,"]/*"))
+    sbename = xml_name(sen)
+    if(!is.na(sbename)){
+      serial = xml_text(xml_find_first(sen, "SerialNumber"))
+      comment = xml_text(xml_find_first(sen, "SensorName"))
+      config[[i]] = data.table(name = name, sbename = sbename, serial = serial, comment = comment)
+    }else{
+      config[[i]] = data.table(name = "empty", sbename = "empty", serial = NA, comment = NA)
+    }
+  }
+  config = rbindlist(config, idcol="channel")
+  return(config)
+}
+
+
 calc_descent_rate <- function(oce){
   if(!exists("descentRate", where=oce@data)){
     prs = oce@data[["pressure"]]

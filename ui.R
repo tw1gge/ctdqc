@@ -11,7 +11,7 @@ par_serials = c("49")
 altimeter_serials = c("68799", "73082")
 turbidity_serials = c("11618", "14426")
 fluorometer_serials = c("2315", "3817")
-optode_serials = c("752")
+optode_serials = c("752", "680")
 rinko_serials = c("0263")
 
 shinyUI(fluidPage(
@@ -96,7 +96,7 @@ shinyUI(fluidPage(
         tabPanel("Table", dataTableOutput("datatable")),
         tabPanel("Map", leafletOutput("map")),
         tabPanel("Sensors",
-          h5("Check sensor serials against xml!"),
+          tableOutput("config"),
           hr(),
           fluidRow(
             column(2,
