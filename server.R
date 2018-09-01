@@ -129,7 +129,6 @@ shinyServer(function(input, output, session) {
     load(paste0(dir, "/CTDQC.rdata"))
       # check CTDQC.rdata is valid
     if(exists("CTDQC_version", where=session)){
-      showNotification("TODO metadata update", type="error")
       profiles$data = session$data
       profiles$header = session$header
       profiles$config = session$config
@@ -621,9 +620,9 @@ shinyServer(function(input, output, session) {
     done = grepl("QC Complete", log, ignore.case=T)
     data.frame("dip" = names(profiles$data), "trim" = trim, "sensor" = sensor, "QC2" = QC2, "done" = done )
   }, server=T)
+
   output$edit_metadata = renderUI({
     validate(need(profiles$global_metadata_default, "data not loaded"))
-
     lapply(editable_metadata, function(i){
       # generate UI dynamically
       id = paste0("netcdf-", i)
@@ -631,6 +630,30 @@ shinyServer(function(input, output, session) {
       textInput(id, i, value=default_value)
     })
   })
+
+  output$sensor_ui = renderUI({
+    validate(need(profiles$config, "data not loaded"))
+    vchannels = c("v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7")
+    global_configs = unique(rbindlist(profiles$config))
+    if(any(grepl("Conductivity, 2", profiles$config[[input$select_profile]]$name))){
+      temperature_serials = global_configs[sbename == "TemperatureSensor"]$serial
+      conductivity_serials = global_configs[sbename == "ConductivitySensor"]$serial
+      wellPanel(
+        fluidRow(
+            h4("Secondary CT"),
+            column(6,
+              column(6, selectInput("TESTserial_cond", "Conductivity Serial", choices = conductivity_serials)),
+              column(6, selectInput("TEST2serial_cond", "Temperature Serial", choices = temperature_serials))
+              ),
+            column(6,
+              br(),
+              actionButton('TESTsecondCT', "Overwrite Primary CT with secondary", icon=icon("reply-all"))
+              )
+          )
+        )
+    }
+  })
+
   output$metadata = renderText({
     validate(need(profiles$global_metadata, ""))
     for(i in editable_metadata){

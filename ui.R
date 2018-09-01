@@ -95,8 +95,11 @@ shinyUI(fluidPage(
                  ),
         tabPanel("Table", dataTableOutput("datatable")),
         tabPanel("Map", leafletOutput("map")),
-        tabPanel("Sensors",
+        tabPanel("SENSORTEST",
           tableOutput("config"),
+          uiOutput("sensor_ui")
+          ),
+        tabPanel("Sensors",
           hr(),
           fluidRow(
             column(2,
