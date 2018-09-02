@@ -6,12 +6,12 @@ optode_coefs = read.csv("optode_coefs.csv")
 
   #### Sensor functions
 
-optode.analogtemp <- function(v){
-  return( ((v * 45) / 5) - 5 )
+optode.analogtemp <- function(v, TempLimit0=-5, TempLimit1=35){
+  TempLimit0 + (v / 5) * diff(c(TempLimit0, TempLimit1))
 }
 
-optode.analogDphase <- function(v){
-  return( 10 + (v / 5) * 60 )
+optode.analogDphase <- function(v, PhaseLimit0=10, PhaseLimit1=70){
+  PhaseLimit0 + (v / 5) * diff(c(PhaseLimit0, PhaseLimit1))
 }
 
 optode.phaseCalc <- function(DPhase, Temp, coefs){
