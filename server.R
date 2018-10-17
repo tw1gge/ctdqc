@@ -10,6 +10,7 @@ library(zoo, quietly=T)
 library(lubridate, quietly=T)
 library(uuid, quietly=T)
 library(ggplot2, quietly=T)
+library(DT)
 
 source("functions.R", local = T)
 CTDQC_version = "2.0"
@@ -141,8 +142,6 @@ shinyServer(function(input, output, session) {
         showNotification("CTDQC error", type="error")
         warning("CTDQC error")
     }
-    # copy data from loaded .rdata file to correct slots
-    profiles$data = session$data
   })
 
   ## Processes

@@ -16,14 +16,14 @@ optode.analogDphase <- function(v, PhaseLimit0=10, PhaseLimit1=70){
 
 optode.phaseCalc <- function(DPhase, Temp, coefs){
     with(coefs, {
-      if(coef == "SVU"){
+      if(coef[1] == "SVU"){
         # For 4831 multipoint calibrated optodes
-        print("using SVU foil batch coefs", batch[1])
+        print(paste("using SVU foil batch coefs", batch[1]))
         Ksv = C0 + C1*Temp + C2*Temp^2
         P0 = C3 + C4*Temp
         Pc = C5 + C6*DPhase # actually calphase
         ((P0/Pc)-1) / Ksv
-      } else{
+      }else{
         # for mkl optodes 3830 & 3835
         print(paste("using foil batch coefs", batch[1]))
         (C0[1]+C0[2]*Temp+C0[3]*Temp^2+C0[4]*Temp^3) +
@@ -380,4 +380,27 @@ write.ctd.netcdf <- function(session, sensor_metadata){
 
   sync.nc(nc)
   close.nc(nc)
+}
+
+read.sbe.ros <- function(file=NA, folder){
+  if(is.na(file)){
+    file_list = list.files(folder, pattern="*.ros")
+    output = list()
+    for(f in file_list){
+      print(f)
+      oce = oce::read.ctd.sbe(paste0(folder,"/", f))
+      output[[f]] = as.data.table(oce@data)
+      output[[f]][, dateTime := oce@metadata$startTime + time]
+    }
+    output = rbindlist(output, idcol="filename")
+  }else{
+      oce = oce::read.ctd.sbe(file)
+      output = as.data.table(oce@data)
+      output[, filename := file]
+      output[, dateTime := oce@metadata$startTime + time]
+  }
+  output = output[,lapply(.SD, median), by=list(filename, bottlesFired)]
+  output[, dateTime := as.POSIXct(dateTime, origin="1970-01-01", tz="UTC")]
+
+  return(output)
 }
