@@ -20,6 +20,8 @@ ctd_columns = list(
   PAR = list(name="par/sat/log", unit=list(expression(), scale="umol photon m-2"))
   )
 vchannels = c("v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7")
+
+# TODO generate these serials from XML
 temperature_serials = c("5558", "5823", "6267", "6268")
 conductivity_serials = c("4499", "4523", "4724", "4725")
 pressure_serials = c("1274", "1343")
@@ -90,7 +92,10 @@ shinyServer(function(input, output, session) {
     profiles$global_metadata = netcdf.metadata(profiles$data, profiles$positions)
     profiles$global_metadata_default = profiles$global_metadata
     if(length(unique(profiles$positions$cruise)) > 1){showNotification("Cruise ID differ between cnv files!", duration=NULL, type="warning")}
-    if(length(unique(m)) != 1){ showNotification("xml header differs between files", type="warning", duration=NULL) }
+    if(length(unique(m)) != 1){
+      showNotification("xml header differs between files", type="warning", duration=NULL)
+      updateCheckboxInput(session, inputId = "apply_global", value = F)
+      }
   })
 
   observeEvent(input$read_bottle, {
@@ -252,8 +257,13 @@ shinyServer(function(input, output, session) {
   ## SENSORS
 
   observeEvent(input$optode, {
-    # first calculate for all data (using untrimmed)
-    for(i in names(profiles$data)){
+    if(input$apply_global){
+      ilst = names(profiles$data)
+    }else{
+      ilst = input$select_profile
+    }
+    for(i in ilst){
+      # first calculate for all data (using untrimmed)
       optode_temperature = optode.analogtemp(profiles$untrimmed[[i]]@data[[input$optode_T_channel]])
       optode_Dphase = optode.analogDphase(profiles$untrimmed[[i]]@data[[input$optode_dphase_channel]])
       salinity = profiles$untrimmed[[i]]@data[["salinity"]]
@@ -278,7 +288,12 @@ shinyServer(function(input, output, session) {
   })
 
   observeEvent(input$rinko, {
-    for(i in names(profiles$data)){
+    if(input$apply_global){
+      ilst = names(profiles$data)
+    }else{
+      ilst = input$select_profile
+    }
+    for(i in ilst){
       rinko_temperature = rinko_temp(profiles$untrimmed[[i]]@data[[input$rinko_T_channel]])
       pressure =  unlist(profiles$untrimmed[[i]]@data["pressure"])
       rinko_oxygen = rinko_o2(profiles$untrimmed[[i]]@data[[input$rinko_O_channel]],
@@ -308,8 +323,12 @@ shinyServer(function(input, output, session) {
   })
 
   observeEvent(input$licor, {
-      # loop and apply to all dips
-    for(i in names(profiles$data)){
+    if(input$apply_global){
+      ilst = names(profiles$data)
+    }else{
+      ilst = input$select_profile
+    }
+    for(i in ilst){
       # calculate using untrimmed data
       licor_par = par_from_voltage(profiles$untrimmed[[i]]@data[[input$par_channel]], input$licor_factor, input$licor_offset)
       profiles$untrimmed[[i]] = oceSetData(profiles$untrimmed[[i]], "par", licor_par,
@@ -327,6 +346,7 @@ shinyServer(function(input, output, session) {
   })
 
   observeEvent(input$flag_par, {
+    # TODO make work with global?
     if("par" %in% names(profiles$data[[input$select_profile]]@data)){
       profiles$data[[input$select_profile]][["par"]] = NA
       log = paste("All PAR removed (Night)")
@@ -339,6 +359,7 @@ shinyServer(function(input, output, session) {
 
 
   observeEvent(input$flag_flu, {
+    # TODO make work with global?
     if("par" %in% names(profiles$data[[input$select_profile]]@data)){
       profiles$data[[input$select_profile]][["fluorescence"]] [profiles$data[[input$select_profile]][["par"]] > input$par_flu_threshold] = NA
       profiles$untrimmed[[input$select_profile]][["fluorescence"]] [profiles$untrimmed[[input$select_profile]][["par"]] > input$par_flu_threshold] = NA
@@ -351,6 +372,7 @@ shinyServer(function(input, output, session) {
   })
 
   observeEvent(input$secondCT, {
+    # TODO make work with global?
     try({
       profiles$data[[input$select_profile]][["temperature"]] = profiles$data[[input$select_profile]][["temperature2"]]
       profiles$data[[input$select_profile]][["conductivity"]] = profiles$data[[input$select_profile]][["conductivity2"]]
@@ -472,9 +494,6 @@ shinyServer(function(input, output, session) {
       updateSelectInput(session, "y", choices = choices, selected = default_y)
       updateSelectInput(session, "select_factor", choices = choices)
       updateSelectInput(session, "select_flag", choices = choices)
-    })
-  observe({
-    updateSelectInput(session, "optode_foil", choices = unique(optode_coefs$batch), selected = "1707")
     })
 
   ## Output
@@ -648,6 +667,7 @@ shinyServer(function(input, output, session) {
   })
 
   output$sensor_ui = renderUI({
+    # TODO make dynamic by what sensors are loaded
     validate(need(profiles$config, "data not loaded"))
     vchannels = c("v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7")
     global_configs = unique(rbindlist(profiles$config))
@@ -676,7 +696,7 @@ wellPanel( fluidRow(
               ),
             column(5,
               selectInput('optode_T_channel', "Optode Temperature channel", choices = vchannels, selected = "v7"),
-              selectInput("optode_foil", "Optode foil Batch #", choices = NULL)
+              selectInput("optode_foil", "Optode foil Batch #", choices = unique(optode_coefs$batch), selected="1707")
               ),
             column(5,
               selectInput('optode_dphase_channel', "Optode dPhase channel", choices = vchannels, selected = "v6"),

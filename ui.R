@@ -19,10 +19,6 @@ shinyUI(fluidPage(
       actionButton('revert', "Revert", icon=icon("repeat")),
       selectInput('select_profile', "Select profile", choices = NULL),
 
-      h4("Decimate"),
-      numericInput('bin_size', "Bin Size (m)", min = 0.5, max = 5, value = 0.5, step = 0.5, width = "50%"),
-      actionButton('decimate', "Decimate", icon=icon("delicious")),
-
       h4("Save"),
       actionButton('write_rdata', "Write Rdata", icon=icon("bookmark")),
 
@@ -85,6 +81,7 @@ shinyUI(fluidPage(
         tabPanel("Table", dataTableOutput("datatable")),
         tabPanel("Map", leafletOutput("map")),
         tabPanel("Sensors",
+          checkboxInput("apply_global", "Apply Global", value = T),
           tableOutput("config"),
           uiOutput("sensor_ui")
           ),
@@ -99,7 +96,9 @@ shinyUI(fluidPage(
           ),
         tabPanel("Publish",
           # dynamically generated UI
-          # selectInput('publish_variables', 'Variables to publish', sensor_metadata$parameter, multiple=T, selectize=T),
+          actionButton('decimate', "Decimate", icon=icon("delicious")),
+          numericInput('bin_size', "Bin Size (m)", min = 0.5, max = 5, value = 0.5, step = 0.5),
+          br(),
           actionButton('make_netcdf', "Publish NetCDF", icon=icon("object-group")),
           actionButton('write_csv', "Write csv's", icon=icon("table")),
           fluidRow(
