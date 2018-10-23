@@ -182,18 +182,12 @@ extract.xml_channel_config <- function(sbe_xml){
 }
 
 
-calc_descent_rate <- function(oce){
+calc_descent_rate <- function(oce, window_size=2){
   if(!exists("descentRate", where=oce@data)){
     prs = oce@data[["pressure"]]
     d_prs = c(0, diff(prs))
-    if(oce@metadata$model == "19plus v2" & oce@metadata$sampleInterval == 0.25){
-      descentRate = zoo::rollmean(d_prs, 8, fill=NA, align="right")*4 # for 19plus 2 second window
-    }
-    if(oce@metadata$model == "9" & oce@metadata$sampleInterval < 0.042){
-      descentRate = zoo::rollmean(d_prs, 48, fill=NA, align="right")*24 # for 9plus 2 second window
-    }else{
-      warning("SBE model not recognised")
-    }
+    rate = 1 / oce@metadata$sampleInterval
+    decent_calc = zoo::rollmean(decent_diff, rate * input$inversion_window, fill=NA, align="right") * rate
     oce@data[["descentRate"]] = descentRate
   }
   return(oce)

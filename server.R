@@ -19,6 +19,16 @@ sensor_metadata = fread("sensor_table.csv")
 ctd_columns = list(
   PAR = list(name="par/sat/log", unit=list(expression(), scale="umol photon m-2"))
   )
+vchannels = c("v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7")
+temperature_serials = c("5558", "5823", "6267", "6268")
+conductivity_serials = c("4499", "4523", "4724", "4725")
+pressure_serials = c("1274", "1343")
+par_serials = c("49")
+altimeter_serials = c("68799", "73082")
+turbidity_serials = c("11618", "14426")
+fluorometer_serials = c("2315", "3817")
+optode_serials = c("752", "680")
+rinko_serials = c("0263")
 
 shinyServer(function(input, output, session) {
 
@@ -51,7 +61,7 @@ shinyServer(function(input, output, session) {
         incProgress(1/length(filelist), detail = paste("loading", i))
         print(i)
         d[[i]] = read.ctd.sbe(paste0(dir,"/",i), columns = ctd_columns) # oce data
-        d[[i]] = calc_descent_rate(d[[i]])
+        # d[[i]] = calc_descent_rate(d[[i]])
         d[[i]] = flag_extra_pump(d[[i]], 100)
         h[[i]] = parse_sbe_xml(d[[i]])
         config[[i]] = extract.xml_channel_config(h[[i]])
@@ -67,7 +77,7 @@ shinyServer(function(input, output, session) {
       }
     if(stringr::str_count(headers, "Derive_date") < length(d)){
       showNotification("Derived variables hve not been calculated for all profiles!", duration=NULL, type="warning")
-      }
+    }
 
       # insert data into data slot
     profiles$data = d
@@ -163,10 +173,11 @@ shinyServer(function(input, output, session) {
     # calculates smoothed decent rate from pressure (as per SBE data processing)
     prs = profiles$data[[input$select_profile]]@data[["pressure"]]
     decent_diff = c(0, diff(prs))
-    decent_calc = zoo::rollmean(decent_diff, 48, fill=NA, align="right")*24 # for 9plus 2 second window
-    # decent_calc = zoo::rollmean(decent_diff, 8, fill=NA, align="right")*4 # for 19plus 2 second window
-
+    rate = 1 / profiles$data[[input$select_profile]]@metadata$sampleInterval # 2second window
+    print(rate)
+    decent_calc = zoo::rollmean(decent_diff, rate * input$inversion_window, fill=NA, align="right") * rate
     profiles$data[[input$select_profile]]@data = lapply(profiles$data[[input$select_profile]]@data, function(x) {
+      # remove data for all parameters!
       x[decent_calc < input$decent_threshold] = NA
       return(x)
     })
@@ -647,16 +658,98 @@ shinyServer(function(input, output, session) {
         fluidRow(
             h4("Secondary CT"),
             column(6,
-              column(6, selectInput("TESTserial_cond", "Conductivity Serial", choices = conductivity_serials)),
-              column(6, selectInput("TEST2serial_cond", "Temperature Serial", choices = temperature_serials))
+              column(6, selectInput("serial_cond", "Conductivity Serial", choices = conductivity_serials)),
+              column(6, selectInput("serial_cond", "Temperature Serial", choices = temperature_serials))
               ),
             column(6,
               br(),
-              actionButton('TESTsecondCT', "Overwrite Primary CT with secondary", icon=icon("reply-all"))
+              actionButton('secondCT', "Overwrite Primary CT with secondary", icon=icon("reply-all"))
               )
           )
         )
     }
+    ###
+wellPanel( fluidRow(
+            column(2,
+              h4("Optode"),
+              selectInput("serial_optode", "Optode Serial", choices=optode_serials)
+              ),
+            column(5,
+              selectInput('optode_T_channel', "Optode Temperature channel", choices = vchannels, selected = "v7"),
+              selectInput("optode_foil", "Optode foil Batch #", choices = NULL)
+              ),
+            column(5,
+              selectInput('optode_dphase_channel', "Optode dPhase channel", choices = vchannels, selected = "v6"),
+              actionButton('optode', "Process Optode", icon=icon("life-ring"))
+              )
+            ),
+          hr(),
+          fluidRow(
+            column(2,
+              h4("RINKO"),
+              selectInput("serial_rinko", "Rinko Serial", choices=rinko_serials)
+              ),
+            column(5,
+              selectInput('rinko_T_channel', "RINKO Temperature channel", choices = vchannels, selected = "v5"),
+              numericInput('rinko_G', label = "G Coefficent", value = 0)
+              ),
+            column(5,
+              selectInput('rinko_O_channel', "RINKO Oxygen channel", choices = vchannels, selected = "v4"),
+              numericInput('rinko_H', label = "H Coefficent", value = 1),
+              actionButton('rinko', "Process RINKO", icon=icon("times-circle-o"))
+              )
+            ),
+          hr(),
+          fluidRow(
+            column(2,
+              h4("Licor PAR"),
+              selectInput("serial_par", "PAR Serial", choices=par_serials)
+              ),
+            column(5,
+              selectInput('par_channel', "PAR channel", choices = vchannels, selected = "v0"),
+              actionButton('flag_par', "Flag all PAR for selected dip (Night)", icon=icon("moon-o"))
+              ),
+            column(5,
+              numericInput('licor_factor', label = "Licor factor", value = 0.22345679),
+              numericInput('licor_offset', label = "Licor offset", value = 3.3737),
+              actionButton('licor', "Process Licor PAR", icon=icon("beer"))
+              )
+            ),
+          hr(),
+          fluidRow(
+            column(2,
+              h4("Fluorometer"),
+              selectInput("serial_flu", "Fluorometer Serial", choices=fluorometer_serials)
+              ),
+            column(5,
+              numericInput('par_flu_threshold', label = "Chlorophyll quenching PAR threshold", value = 1),
+              actionButton('flag_flu', "Flag quenched chlorophyll fluorometry", icon=icon("ban")),
+              tableOutput("chl_coef")
+              ),
+            column(5,
+              numericInput('chl_factor', label="Chl Factor", value=1.0, step=0.01),
+              numericInput('chl_offset', label="Chl Offset", value=0.0, step=0.01),
+              actionButton('calc_flu', "derive Chlorophyll from flu regression", icon=icon("leaf"))
+              )
+            ),
+          hr(),
+          fluidRow(
+            column(2,
+              h4("Pressure"),
+              selectInput("serial_prs", "Pressure Serial", choices=pressure_serials)
+              )
+            ),
+          hr(),
+          fluidRow(
+            column(2,
+              h4("Altimeter"),
+              selectInput("serial_alt", "Altimeter Serial", choices=altimeter_serials)
+              )
+            )
+
+
+)
+
   })
 
   output$metadata = renderText({
