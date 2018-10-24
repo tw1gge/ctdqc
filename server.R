@@ -667,109 +667,111 @@ shinyServer(function(input, output, session) {
   })
 
   output$sensor_ui = renderUI({
-    # TODO make dynamic by what sensors are loaded
     validate(need(profiles$config, "data not loaded"))
-    vchannels = c("v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7")
+    # TODO move this to sensor panel and use for different config check
     global_configs = unique(rbindlist(profiles$config))
-    if(any(grepl("Conductivity, 2", profiles$config[[input$select_profile]]$name))){
+    ui = list()
+
+    if(any(grepl("Conductivity, 2", global_configs$name))){
       temperature_serials = global_configs[sbename == "TemperatureSensor"]$serial
       conductivity_serials = global_configs[sbename == "ConductivitySensor"]$serial
-      wellPanel(
+      # add ui to ui list
+      ui <- list(ui, wellPanel(
         fluidRow(
-            h4("Secondary CT"),
-            column(6,
-              column(6, selectInput("serial_cond", "Conductivity Serial", choices = conductivity_serials)),
-              column(6, selectInput("serial_cond", "Temperature Serial", choices = temperature_serials))
-              ),
-            column(6,
-              br(),
-              actionButton('secondCT', "Overwrite Primary CT with secondary", icon=icon("reply-all"))
-              )
-          )
-        )
-    }
-    ###
-wellPanel( fluidRow(
-            column(2,
-              h4("Optode"),
-              selectInput("serial_optode", "Optode Serial", choices=optode_serials)
-              ),
-            column(5,
-              selectInput('optode_T_channel', "Optode Temperature channel", choices = vchannels, selected = "v7"),
-              selectInput("optode_foil", "Optode foil Batch #", choices = unique(optode_coefs$batch), selected="1707")
-              ),
-            column(5,
-              selectInput('optode_dphase_channel', "Optode dPhase channel", choices = vchannels, selected = "v6"),
-              actionButton('optode', "Process Optode", icon=icon("life-ring"))
-              )
+          h4("Secondary CT"),
+          column(6,
+            column(6, selectInput("serial_cond", "Conductivity Serial", choices = conductivity_serials)),
+            column(6, selectInput("serial_cond", "Temperature Serial", choices = temperature_serials))
             ),
-          hr(),
-          fluidRow(
-            column(2,
-              h4("RINKO"),
-              selectInput("serial_rinko", "Rinko Serial", choices=rinko_serials)
-              ),
-            column(5,
-              selectInput('rinko_T_channel', "RINKO Temperature channel", choices = vchannels, selected = "v5"),
-              numericInput('rinko_G', label = "G Coefficent", value = 0)
-              ),
-            column(5,
-              selectInput('rinko_O_channel', "RINKO Oxygen channel", choices = vchannels, selected = "v4"),
-              numericInput('rinko_H', label = "H Coefficent", value = 1),
-              actionButton('rinko', "Process RINKO", icon=icon("times-circle-o"))
-              )
-            ),
-          hr(),
-          fluidRow(
-            column(2,
-              h4("Licor PAR"),
-              selectInput("serial_par", "PAR Serial", choices=par_serials)
-              ),
-            column(5,
-              selectInput('par_channel', "PAR channel", choices = vchannels, selected = "v0"),
-              actionButton('flag_par', "Flag all PAR for selected dip (Night)", icon=icon("moon-o"))
-              ),
-            column(5,
-              numericInput('licor_factor', label = "Licor factor", value = 0.22345679),
-              numericInput('licor_offset', label = "Licor offset", value = 3.3737),
-              actionButton('licor', "Process Licor PAR", icon=icon("beer"))
-              )
-            ),
-          hr(),
-          fluidRow(
-            column(2,
-              h4("Fluorometer"),
-              selectInput("serial_flu", "Fluorometer Serial", choices=fluorometer_serials)
-              ),
-            column(5,
-              numericInput('par_flu_threshold', label = "Chlorophyll quenching PAR threshold", value = 1),
-              actionButton('flag_flu', "Flag quenched chlorophyll fluorometry", icon=icon("ban")),
-              tableOutput("chl_coef")
-              ),
-            column(5,
-              numericInput('chl_factor', label="Chl Factor", value=1.0, step=0.01),
-              numericInput('chl_offset', label="Chl Offset", value=0.0, step=0.01),
-              actionButton('calc_flu', "derive Chlorophyll from flu regression", icon=icon("leaf"))
-              )
-            ),
-          hr(),
-          fluidRow(
-            column(2,
-              h4("Pressure"),
-              selectInput("serial_prs", "Pressure Serial", choices=pressure_serials)
-              )
-            ),
-          hr(),
-          fluidRow(
-            column(2,
-              h4("Altimeter"),
-              selectInput("serial_alt", "Altimeter Serial", choices=altimeter_serials)
-              )
+          column(6,
+            br(),
+            actionButton('secondCT', "Overwrite Primary CT with secondary", icon=icon("reply-all"))
             )
+          )
+        ))
+    }
 
+    if(any(grepl("optode", global_configs$comment, ignore.case=T))){
+      ui = list(ui, wellPanel(
+        fluidRow(
+          column(2,
+                 h4("Optode"),
+                 selectInput("serial_optode", "Optode Serial", choices=optode_serials)
+                 ),
+          column(5,
+                 selectInput('optode_T_channel', "Optode Temperature channel", choices = vchannels, selected = "v7"),
+                 selectInput("optode_foil", "Optode foil Batch #", choices = unique(optode_coefs$batch), selected="1707")
+                 ),
+          column(5,
+                 selectInput('optode_dphase_channel', "Optode dPhase channel", choices = vchannels, selected = "v6"),
+                 actionButton('optode', "Process Optode", icon=icon("life-ring"))
+                 )
+          )
+        ))
+    }
 
-)
+    if(any(grepl("rinko", global_configs$comment, ignore.case=T))){
+      ui = list(ui, wellPanel(
+        fluidRow(
+          column(2,
+            h4("RINKO"),
+            selectInput("serial_rinko", "Rinko Serial", choices=rinko_serials)
+            ),
+          column(5,
+            selectInput('rinko_T_channel', "RINKO Temperature channel", choices = vchannels, selected = "v5"),
+            numericInput('rinko_G', label = "G Coefficent", value = 0)
+            ),
+          column(5,
+            selectInput('rinko_O_channel', "RINKO Oxygen channel", choices = vchannels, selected = "v4"),
+            numericInput('rinko_H', label = "H Coefficent", value = 1),
+            actionButton('rinko', "Process RINKO", icon=icon("times-circle-o"))
+            )
+          )
+        ))
+    }
 
+    if(any(grepl("licor", global_configs$name, ignore.case=T))){
+      ui = list(ui, wellPanel(
+        fluidRow(
+          column(2,
+            h4("LiCor PAR"),
+            selectInput("serial_par", "PAR Serial", choices=par_serials)
+            ),
+          column(5,
+            selectInput('par_channel', "PAR channel", choices = vchannels, selected = "v0"),
+            actionButton('flag_par', "Flag all PAR for selected dip (Night)", icon=icon("moon-o"))
+            ),
+          column(5,
+            numericInput('licor_factor', label = "Licor factor", value = 0.22345679),
+            numericInput('licor_offset', label = "Licor offset", value = 3.3737),
+            actionButton('licor', "Process Licor PAR", icon=icon("beer"))
+            )
+          )
+      ))
+    }
+
+    if(any(grepl("licor", global_configs$name, ignore.case=T))){
+      ui = list(ui, wellPanel(
+        fluidRow(
+          column(2,
+            h4("Fluorometer"),
+            selectInput("serial_flu", "Fluorometer Serial", choices=fluorometer_serials)
+            ),
+          column(5,
+            numericInput('par_flu_threshold', label = "Chlorophyll quenching PAR threshold", value = 1),
+            actionButton('flag_flu', "Flag quenched chlorophyll fluorometry", icon=icon("ban")),
+            tableOutput("chl_coef")
+            ),
+          column(5,
+            numericInput('chl_factor', label="Chl Factor", value=1.0, step=0.01),
+            numericInput('chl_offset', label="Chl Offset", value=0.0, step=0.01),
+            actionButton('calc_flu', "derive Chlorophyll from flu regression", icon=icon("leaf"))
+            )
+          )
+      ))
+    }
+
+    ui
   })
 
   output$metadata = renderText({
