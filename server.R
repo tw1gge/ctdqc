@@ -65,6 +65,10 @@ shinyServer(function(input, output, session) {
         print(i)
         d[[i]] = read.ctd.sbe(paste0(dir,"/",i), columns = ctd_columns) # oce data
         # d[[i]] = calc_descent_rate(d[[i]])
+        if(!"pumpStatus" %in% names(d[[i]]@data)){
+          print("pumpStatus not found, assuming pump is on")
+          d[[i]]@data[["pumpStatus"]] = rep(1, length(d[[i]]@data$scan))
+        }
         d[[i]] = flag_extra_pump(d[[i]], 100)
         h[[i]] = parse_sbe_xml(d[[i]])
         config[[i]] = extract.xml_channel_config(h[[i]])
@@ -194,6 +198,7 @@ shinyServer(function(input, output, session) {
   })
 
   observeEvent(input$decimate,{
+    # TODO move all decimate function to csv writer
     profiles$data = lapply(profiles$data, function(x){
         # find data which is all NA
       for(param in names(x@data)){
@@ -280,9 +285,10 @@ shinyServer(function(input, output, session) {
       profiles$untrimmed[[i]] = oceSetData(profiles$untrimmed[[i]], "oxygen_optode", optode_oxygen,
                                              unit = list(unit=expression(mmol~m-3), scale="Optode"))
       # now subset and apply to $data, don't write subset to log
+      scans = profiles$data[[i]][["scan"]]
       x = subset(profiles$untrimmed[[i]],
-                 scan >= min(profiles$data[[i]][["scan"]], na.rm=T) &
-                 scan <= max(profiles$data[[i]][["scan"]], na.rm=T))
+                 scan >= scans[1] &
+                 scan <= scans[length(scans)])
       profiles$data[[i]] = oceSetData(profiles$data[[i]], "temperature_optode", x[["temperature_optode"]],
                                         unit = list(unit=expression(degree*C), scale="Optode"))
       profiles$data[[i]] = oceSetData(profiles$data[[i]], "oxygen_optode", x[["oxygen_optode"]],
@@ -311,9 +317,10 @@ shinyServer(function(input, output, session) {
       profiles$untrimmed[[i]] = oceSetData(profiles$untrimmed[[i]], "oxygen_RINKO", rinko_oxygen,
                                              unit = list(unit=expression(mmol~m-3), scale="RINKO"))
       # now subset and apply to $data, don't write subset to log
+      scans = profiles$data[[i]][["scan"]]
       x = subset(profiles$untrimmed[[i]],
-                 scan >= min(profiles$data[[i]][["scan"]], na.rm=T) &
-                 scan <= max(profiles$data[[i]][["scan"]], na.rm=T))
+                 scan >= scans[1] &
+                 scan <= scans[length(scans)])
 
       profiles$data[[i]] = oceSetData(profiles$data[[i]], "temperature_RINKO", x[["temperature_RINKO"]],
                                         unit = list(unit=expression(degree*C), scale="RINKO"))
@@ -338,9 +345,10 @@ shinyServer(function(input, output, session) {
       profiles$untrimmed[[i]] = oceSetData(profiles$untrimmed[[i]], "par", licor_par,
                                            unit = list(unit=expression(umol~s-1~m-2), scale = "PAR/Irradiance, Cefas Licor PAR"))
       # now subset and add to data
+      scans = profiles$data[[i]][["scan"]]
       x = subset(profiles$untrimmed[[i]],
-                 scan >= min(profiles$data[[i]][["scan"]], na.rm=T) &
-                 scan <= max(profiles$data[[i]][["scan"]], na.rm=T))
+                 scan >= scans[1] &
+                 scan <= scans[length(scans)])
 
       log = paste("PAR processed with factor =", input$licor_factor, ",offset =", input$licor_offset)
       profiles$data[[i]] = oceSetData(profiles$data[[i]], "par", x[["par"]],
@@ -350,7 +358,7 @@ shinyServer(function(input, output, session) {
   })
 
   observeEvent(input$flag_par, {
-    # TODO make work with global?
+    # TODO make work with global? and based on lat/lon/time
     if("par" %in% names(profiles$data[[input$select_profile]]@data)){
       profiles$data[[input$select_profile]][["par"]] = NA
       log = paste("All PAR removed (Night)")
@@ -386,6 +394,9 @@ shinyServer(function(input, output, session) {
       showNotification("Primary CT data replaced with that from secondary")
     })
   })
+
+  # TODO add remove variable function
+  # observeEvent
 
   ## Write out
 
@@ -431,6 +442,7 @@ shinyServer(function(input, output, session) {
         if(any(grepl("ctdDecimate", log[[p]]$value))){
           d = d[,-c("scan", "time", "dateTime"), with=F]
         }
+        p = substr(p, 1, nchar(p)-4) # drop the .cnv from filename
         write.csv(d, file = paste0(dir, "/", p, ".csv"))
         write.csv(as.data.table(log[[p]]), file = paste0(dir, "/", p, ".log"))
       }
