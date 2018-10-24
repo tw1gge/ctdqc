@@ -398,3 +398,15 @@ read.sbe.ros <- function(file=NA, folder){
 
   return(output)
 }
+
+CTDQC_manual_calc <- function(session, newvar, sourcevar, factor = 1, offset = 0, log=NA){
+  # for manually adding or editing variables
+  for(stn in names(session$data)){
+    print(stn)
+    session$data[[stn]]@data[[newvar]] = (session$data[[stn]]@data[[sourcevar]] * factor) + offset
+    processingLog(session$data[[stn]]) = log
+    session$untrimmed[[stn]]@data[[newvar]] = (session$untrimmed[[stn]]@data[[sourcevar]] * factor) + offset
+    processingLog(session$untrimmed[[stn]]) = log
+  }
+  return(session)
+}
