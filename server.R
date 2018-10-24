@@ -25,7 +25,7 @@ vchannels = c("v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7")
 temperature_serials = c("5558", "5823", "6267", "6268")
 conductivity_serials = c("4499", "4523", "4724", "4725")
 pressure_serials = c("1274", "1343")
-par_serials = c("49")
+par_serials = c("49", "71")
 altimeter_serials = c("68799", "73082")
 turbidity_serials = c("11618", "14426")
 fluorometer_serials = c("2315", "3817")
@@ -36,7 +36,8 @@ shinyServer(function(input, output, session) {
 
   # find OS disk drives
   volumes = getVolumesFast()
-  shinyDirChoose(input, 'directory', roots=volumes, session=session, restrictions=system.file(package='base'))
+  volumes = c("A:" = "H:/Dropbox (CEFAS)/CTD")
+  shinyDirChoose(input, 'directory', roots=volumes, session=session, restrictions=system.file(package='base'), updateFreq=500)
   output$directory = renderText({paste0(parseDirPath(volumes, input$directory), "/")})
   # make dynamic file list for storing the CTD objects, a list of S4 objects
   profiles = reactiveValues(data = NULL, bottles = NA)
@@ -452,21 +453,26 @@ shinyServer(function(input, output, session) {
 
   observeEvent(input$prev_filter, {
     time_constant = input$filter_t
-    sample_rate = 24
+    sample_rate = 1 / profiles$data[[input$select_profile]]@metadata$sampleInterval # 2second window
     Wn = (1 / time_constant) / (sample_rate * 2)
     flt = signal::butter(2, Wn, "low")
     var = profiles$untrimmed[[input$select_profile]]@data[[input$filter_x1]]
+    var = zoo::na.approx(var, na.rm=F, rule=2)
     profiles$prev_filter = signal::filtfilt(flt, var)
   })
 
   observeEvent(input$apply_filter, {
     time_constant = input$filter_t
-    sample_rate = 24
+    sample_rate = 1 / profiles$data[[input$select_profile]]@metadata$sampleInterval # 2second window
     Wn = (1 / time_constant) / (sample_rate * 2)
     flt = signal::butter(2, Wn, "low")
-    untrimmed = signal::filtfilt(flt, profiles$untrimmed[[input$select_profile]]@data[[input$filter_x1]])
+    untrimmed = profiles$untrimmed[[input$select_profile]]@data[[input$filter_x1]]
+    untrimmed = zoo::na.approx(untrimmed, na.rm=F, rule=2)
+    untrimmed = signal::filtfilt(flt, untrimmed)
     profiles$untrimmed[[input$select_profile]]@data[[input$filter_x1]] = untrimmed
-    data_ = signal::filtfilt(flt, profiles$data[[input$select_profile]]@data[[input$filter_x1]])
+    data_ = profiles$data[[input$select_profile]]@data[[input$filter_x1]]
+    data_ = zoo::na.approx(data_, na.rm=F, rule=2)
+    data_ = signal::filtfilt(flt, data_)
     profiles$data[[input$select_profile]]@data[[input$filter_x1]] = data_
   })
 
