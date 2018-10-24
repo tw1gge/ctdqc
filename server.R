@@ -71,7 +71,7 @@ shinyServer(function(input, output, session) {
     })
       # check if processing steps have been completed
     headers = paste(extract.oce.metadata(d, "header"), collapse = ",")
-    if(stringr::str_count(headers, "filter_low_pass_[AB]_vars = prDM") < length(d)){
+    if(stringr::str_count(headers, "filter_low_pass_[AB]_vars = pr[Dd]M") < length(d)){
       showNotification("pressure filter has not been applied for all profiles!", duration=NULL, type="warning")
       }
     if(stringr::str_count(headers, "celltm_date") < length(d)){
@@ -91,9 +91,11 @@ shinyServer(function(input, output, session) {
     profiles$positions = extract.oce.metadata(profiles$data, c("filename", "startTime", "station", "longitude", "latitude", "cruise"))
     profiles$global_metadata = netcdf.metadata(profiles$data, profiles$positions)
     profiles$global_metadata_default = profiles$global_metadata
+    profiles$global_config = unique(rbindlist(profiles$config))[order(channel)]
+
     if(length(unique(profiles$positions$cruise)) > 1){showNotification("Cruise ID differ between cnv files!", duration=NULL, type="warning")}
-    if(length(unique(m)) != 1){
-      showNotification("xml header differs between files", type="warning", duration=NULL)
+    if(length(unique(config)) != 1){
+      showNotification("channel configuration differs between files", type="warning", duration=NULL)
       updateCheckboxInput(session, inputId = "apply_global", value = F)
       }
   })
@@ -151,8 +153,9 @@ shinyServer(function(input, output, session) {
       profiles$untrimmed = session$untrimmed
       profiles$original = session$original
       profiles$positions = session$positions
+      profiles$global_config = session$global_config
       profiles$global_metadata = session$global_metadata
-      profiles$global_metadata_default = profiles$global_metadata}
+      profiles$global_metadata_default = session$global_metadata}
     else{
         showNotification("CTDQC error", type="error")
         warning("CTDQC error")
@@ -395,6 +398,7 @@ shinyServer(function(input, output, session) {
     session$untrimmed = profiles$untrimmed
     session$original = profiles$original
     session$positions = profiles$positions
+    session$global_config = profiles$global_config
     session$global_metadata = profiles$global_metadata
     session$global_metadata_default = profiles$global_metadata
     session$CTDQC_version = CTDQC_version
@@ -668,13 +672,11 @@ shinyServer(function(input, output, session) {
 
   output$sensor_ui = renderUI({
     validate(need(profiles$config, "data not loaded"))
-    # TODO move this to sensor panel and use for different config check
-    global_configs = unique(rbindlist(profiles$config))
     ui = list()
 
-    if(any(grepl("Conductivity, 2", global_configs$name))){
-      temperature_serials = global_configs[sbename == "TemperatureSensor"]$serial
-      conductivity_serials = global_configs[sbename == "ConductivitySensor"]$serial
+    if(any(grepl("Conductivity, 2", profiles$global_config$name))){
+      temperature_serials = profiles$global_config[sbename == "TemperatureSensor"]$serial
+      conductivity_serials = profiles$global_config[sbename == "ConductivitySensor"]$serial
       # add ui to ui list
       ui <- list(ui, wellPanel(
         fluidRow(
@@ -691,7 +693,7 @@ shinyServer(function(input, output, session) {
         ))
     }
 
-    if(any(grepl("optode", global_configs$comment, ignore.case=T))){
+    if(any(grepl("optode", profiles$global_config$comment, ignore.case=T))){
       ui = list(ui, wellPanel(
         fluidRow(
           column(2,
@@ -710,7 +712,7 @@ shinyServer(function(input, output, session) {
         ))
     }
 
-    if(any(grepl("rinko", global_configs$comment, ignore.case=T))){
+    if(any(grepl("rinko", profiles$global_config$comment, ignore.case=T))){
       ui = list(ui, wellPanel(
         fluidRow(
           column(2,
@@ -730,7 +732,7 @@ shinyServer(function(input, output, session) {
         ))
     }
 
-    if(any(grepl("licor", global_configs$name, ignore.case=T))){
+    if(any(grepl("licor", c(profiles$global_config$name, profiles$global_config$comment), ignore.case=T))){
       ui = list(ui, wellPanel(
         fluidRow(
           column(2,
@@ -750,7 +752,7 @@ shinyServer(function(input, output, session) {
       ))
     }
 
-    if(any(grepl("licor", global_configs$name, ignore.case=T))){
+    if(any(grepl("fluoro", profiles$global_config$name, ignore.case=T))){
       ui = list(ui, wellPanel(
         fluidRow(
           column(2,
