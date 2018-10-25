@@ -33,11 +33,16 @@ fluorometer_serials = c("2315", "3817")
 optode_serials = c("752", "680")
 rinko_serials = c("0263")
 
+# runUrl("https://bitbucket.org/betascoo8/ctdqc/get/dev.zip")
+
 shinyServer(function(input, output, session) {
 
   # find OS disk drives
   volumes = getVolumesFast()
   # volumes = c("A:" = "C:/Users/th05/Dropbox (CEFAS)/CTD", volumes)
+  if(dir.exists("\\\\lowfilecds\\Function\\SmartBuoyData\\CTD - SBE")){
+    volumes = c("SmartBuoyData:" = "\\\\lowfilecds\\Function\\SmartBuoyData\\CTD - SBE", "C:" = "C:")
+  }
   shinyDirChoose(input, 'directory', roots=volumes, session=session, restrictions=system.file(package='base'), updateFreq=500)
   output$directory = renderText({paste0(parseDirPath(volumes, input$directory), "/")})
   # make dynamic file list for storing the CTD objects, a list of S4 objects
