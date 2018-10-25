@@ -10,7 +10,8 @@ library(zoo, quietly=T)
 library(lubridate, quietly=T)
 library(uuid, quietly=T)
 library(ggplot2, quietly=T)
-library(DT)
+library(DT, quietly = T)
+library(signal, quietly = T)
 
 source("functions.R", local = T)
 CTDQC_version = "2.0"
@@ -36,7 +37,7 @@ shinyServer(function(input, output, session) {
 
   # find OS disk drives
   volumes = getVolumesFast()
-  volumes = c("A:" = "H:/Dropbox (CEFAS)/CTD")
+  # volumes = c("A:" = "C:/Users/th05/Dropbox (CEFAS)/CTD", volumes)
   shinyDirChoose(input, 'directory', roots=volumes, session=session, restrictions=system.file(package='base'), updateFreq=500)
   output$directory = renderText({paste0(parseDirPath(volumes, input$directory), "/")})
   # make dynamic file list for storing the CTD objects, a list of S4 objects
