@@ -501,10 +501,10 @@ shinyServer(function(input, output, session) {
     untrimmed = signal::filtfilt(flt, untrimmed)
     profiles$untrimmed[[input$select_profile]]@data[[input$filter_x1]] = untrimmed
     # pull out the scans from untrimmed that we need, don't rerun filter.
-    scan_range = range(profiles$data[[input$select_profile]]@data$scan)
-    data_ = profiles$untrimmed[[input$select_profile]]@data[[input$filter_x1]]
-    data_ = data_[which(profiles$untrimmed[[input$select_profile]]@data$scan %between% scan_range)]
-    profiles$data[[input$select_profile]]@data[[input$filter_x1]] = data_
+    scan_range = range(profiles$data[[input$select_profile]]@data$scan, na.rm=T)
+    data_ = profiles$untrimmed[[input$select_profile]]
+    data_ = subset(data_, scan %between% scan_range)
+    profiles$data[[input$select_profile]]@data[[input$filter_x1]] = data_@data[[input$filter_x1]]
   })
 
 
