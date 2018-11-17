@@ -40,9 +40,10 @@ shinyServer(function(input, output, session) {
   # find OS disk drives
   volumes = getVolumesFast()
   # volumes = c("A:" = "C:/Users/th05/Dropbox (CEFAS)/CTD", volumes)
-  if(dir.exists("\\\\lowfilecds\\Function\\SmartBuoyData\\CTD - SBE")){
-    volumes = c("SmartBuoyData:" = "\\\\lowfilecds\\Function\\SmartBuoyData\\CTD - SBE", "C:" = "C:")
-  }
+  volumes = c("A:" = "H:/Dropbox (CEFAS)/CTD", volumes)
+  # if(dir.exists("\\\\lowfilecds\\Function\\SmartBuoyData\\CTD - SBE")){
+    # volumes = c("SmartBuoyData:" = "\\\\lowfilecds\\Function\\SmartBuoyData\\CTD - SBE", "C:" = "C:")
+  # }
   shinyDirChoose(input, 'directory', roots=volumes, session=session, restrictions=system.file(package='base'), updateFreq=500)
   output$directory = renderText({paste0(parseDirPath(volumes, input$directory), "/")})
   # make dynamic file list for storing the CTD objects, a list of S4 objects
@@ -397,12 +398,23 @@ shinyServer(function(input, output, session) {
       profiles$data[[input$select_profile]][["salinity"]] = profiles$data[[input$select_profile]][["salinity2"]]
       profiles$data[[input$select_profile]][["salinityDifference"]] = 0
       processingLog(profiles$data[[input$select_profile]]) = paste("Primary CT data replaced with that from secondary")
+      profiles$untrimmed[[input$select_profile]][["temperature"]] = profiles$data[[input$select_profile]][["temperature2"]]
+      profiles$untrimmed[[input$select_profile]][["conductivity"]] = profiles$data[[input$select_profile]][["conductivity2"]]
+      profiles$untrimmed[[input$select_profile]][["salinity"]] = profiles$data[[input$select_profile]][["salinity2"]]
+      profiles$untrimmed[[input$select_profile]][["salinityDifference"]] = 0
       showNotification("Primary CT data replaced with that from secondary")
     })
   })
 
   # TODO add remove variable function
-  # observeEvent
+  observeEvent(input$remove_variable,{
+    #
+    try({
+      profiles$data[[input$select_profile]][[input$remove_variable_var]] = NULL
+      profiles$untrimmed[[input$select_profile]][[input$remove_variable_var]] = NULL
+      processingLog(profiles$data[[input$select_profile]]) = paste("removed", input$remove_variable_var, "from data")
+    })
+  })
 
   ## Write out
 
@@ -523,6 +535,7 @@ shinyServer(function(input, output, session) {
       updateSelectInput(session, "y", choices = choices, selected = default_y)
       updateSelectInput(session, "select_factor", choices = choices)
       updateSelectInput(session, "select_flag", choices = choices)
+      updateSelectInput(session, "remove_variable_var", choices = choices)
     })
 
   ## Output

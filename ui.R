@@ -73,8 +73,8 @@ shinyUI(fluidPage(
                    column(3, numericInput('filter_t', label="time constant (s)", value=0.15, step=0.01)),
                    column(6,
                      br(),
-                     actionButton('prev_filter', "Preview filter", icon=icon("flag")),
-                     actionButton('apply_filter', "Apply filter", icon=icon("flag"))
+                     actionButton('prev_filter', "Preview filter", icon=icon("eye")),
+                     actionButton('apply_filter', "Apply filter", icon=icon("filter"))
                      )
                    ),
                  plotOutput("filter_plot", height=800, dblclick="filter_plot_dblclick", brush= brushOpts(id="filter_plot_brush", resetOnNew=T))
@@ -84,6 +84,15 @@ shinyUI(fluidPage(
         tabPanel("Sensors",
           checkboxInput("apply_global", "Apply Global", value = T),
           tableOutput("config"),
+          wellPanel(
+            fluidRow(
+              column(5,
+                h4("Remove variable"),
+                selectInput("remove_variable_var", NULL, choices = NULL),
+                actionButton("remove_variable", "Remove", icon=icon("minus-square"))
+                )
+            )
+          ),
           uiOutput("sensor_ui")
           ),
         tabPanel("Bottles",
