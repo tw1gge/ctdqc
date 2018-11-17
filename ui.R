@@ -50,7 +50,7 @@ shinyUI(fluidPage(
                    column(4, selectInput("x1", "Primary (Blue) X axis", choices = NULL)),
                    column(4, selectInput("x2", "Secondary (Red) X axis", choices = NULL))
                    ),
-                 plotOutput("profile_plot", brush = brushOpts("flag_brush", direction = "xy"), height="800px"),
+                 plotOutput("profile_plot", brush = brushOpts("flag_brush", direction = "xy"), height=800),
                  h6("Flags and factors are applied to the primary axis only and for all dips"),
                  h4("Flag"),
                  actionButton('apply_flag', "Apply Flag", icon=icon("flag")),
@@ -65,7 +65,8 @@ shinyUI(fluidPage(
                  h4("CTD / Niskin regressions"),
                  tableOutput("bottle_coef")
                  ),
-        tabPanel("TS Plot", plotOutput("TS_plot")),
+        tabPanel("TS Plot", plotOutput("TS_plot", height=700, width=700)),
+        tabPanel("Hysteresis Plot", plotOutput("hyst_plot", height=800)),
         tabPanel("Filter Plot",
                  fluidRow(
                    column(3, selectInput("filter_x1", "Parameter", choices = NULL)),
@@ -76,7 +77,7 @@ shinyUI(fluidPage(
                      actionButton('apply_filter', "Apply filter", icon=icon("flag"))
                      )
                    ),
-                 plotOutput("filter_plot", height="600px", dblclick="filter_plot_dblclick", brush= brushOpts(id="filter_plot_brush", resetOnNew=T))
+                 plotOutput("filter_plot", height=800, dblclick="filter_plot_dblclick", brush= brushOpts(id="filter_plot_brush", resetOnNew=T))
                  ),
         tabPanel("Table", dataTableOutput("datatable")),
         tabPanel("Map", leafletOutput("map")),

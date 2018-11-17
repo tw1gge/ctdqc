@@ -481,16 +481,17 @@ shinyServer(function(input, output, session) {
 
   observeEvent(input$apply_filter, {
     time_constant = input$filter_t
-    sample_rate = 1 / profiles$data[[input$select_profile]]@metadata$sampleInterval # 2second window
+    sample_rate = 1 / profiles$data[[input$select_profile]]@metadata$sampleInterval
     Wn = (1 / time_constant) / (sample_rate * 2)
     flt = signal::butter(2, Wn, "low")
     untrimmed = profiles$untrimmed[[input$select_profile]]@data[[input$filter_x1]]
     untrimmed = zoo::na.approx(untrimmed, na.rm=F, rule=2)
     untrimmed = signal::filtfilt(flt, untrimmed)
     profiles$untrimmed[[input$select_profile]]@data[[input$filter_x1]] = untrimmed
-    data_ = profiles$data[[input$select_profile]]@data[[input$filter_x1]]
-    data_ = zoo::na.approx(data_, na.rm=F, rule=2)
-    data_ = signal::filtfilt(flt, data_)
+    # pull out the scans from untrimmed that we need, don't rerun filter.
+    scan_range = range(profiles$data[[input$select_profile]]@data$scan)
+    data_ = profiles$untrimmed[[input$select_profile]]@data[[input$filter_x1]]
+    data_ = data_[which(profiles$untrimmed[[input$select_profile]]@data$scan %between% scan_range)]
     profiles$data[[input$select_profile]]@data[[input$filter_x1]] = data_
   })
 
@@ -583,7 +584,10 @@ shinyServer(function(input, output, session) {
     }else{
       pd[, filter := NaN] # so ggplot won't plot it
     }
-    ggplot(pd[pumpStatus == 1]) +
+    if(exists("pumpStatus", where=profile@data)){
+      pd = pd[pumpStatus == 1 & pressure > 1]
+    }
+    ggplot(pd) +
       geom_path(aes(time, filter), color="red") +
       geom_path(aes(time, get(input$filter_x1)), alpha=0.5) +
       theme_bw() +
@@ -593,7 +597,21 @@ shinyServer(function(input, output, session) {
   output$TS_plot = renderPlot({
     validate(need(!is.null(profiles$data[[input$select_profile]]), "Data not loaded"))
     plotTS(profiles$data[[input$select_profile]])
-    })
+  })
+  output$hyst_plot = renderPlot({
+    validate(need(!is.null(profiles$untrimmed[[input$select_profile]]), "Data not loaded"))
+    pd = as.data.table(profiles$untrimmed[[input$select_profile]]@data)
+    scan_max_pressure = min(pd[pressure == max(pressure)]$scan)
+    pd[, dir := "down"]
+    pd[scan > scan_max_pressure, dir := "up"]
+    if(exists("pumpStatus", where=profile@data)){
+      pd = pd[pumpStatus == 1 & pressure > 1]
+    }
+    ggplot(pd) +
+      geom_path(aes(get(input$filter_x1), pressure, color=dir)) +
+      theme_bw() + scale_y_reverse() +
+      labs(x = input$filter_x1, y="pressure") + theme(legend.position="bottom")
+  })
   output$map = renderLeaflet({
     validate(need(!is.null(profiles$data[[input$select_profile]]), "Data not loaded"))
     leaflet(profiles$positions) %>%
