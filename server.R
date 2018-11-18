@@ -12,6 +12,7 @@ library(uuid, quietly=T)
 library(ggplot2, quietly=T)
 library(DT, quietly = T)
 library(signal, quietly = T)
+library(geosphere, quietly=T)
 
 source("functions.R", local = T)
 CTDQC_version = "2.0"
@@ -168,6 +169,9 @@ shinyServer(function(input, output, session) {
       profiles$global_config = session$global_config
       profiles$global_metadata = session$global_metadata
       profiles$global_metadata_default = session$global_metadata}
+      if(!is.null(session$bottles)){
+        profiles$bottles = session$bottles
+      }
     else{
         showNotification("CTDQC error", type="error")
         warning("CTDQC error")
@@ -597,7 +601,7 @@ shinyServer(function(input, output, session) {
     }else{
       pd[, filter := NaN] # so ggplot won't plot it
     }
-    if(exists("pumpStatus", where=profile@data)){
+    if(exists("pumpStatus", where=pd)){
       pd = pd[pumpStatus == 1 & pressure > 1]
     }
     ggplot(pd) +
@@ -613,17 +617,39 @@ shinyServer(function(input, output, session) {
   })
   output$hyst_plot = renderPlot({
     validate(need(!is.null(profiles$untrimmed[[input$select_profile]]), "Data not loaded"))
-    pd = as.data.table(profiles$untrimmed[[input$select_profile]]@data)
-    scan_max_pressure = min(pd[pressure == max(pressure)]$scan)
-    pd[, dir := "down"]
-    pd[scan > scan_max_pressure, dir := "up"]
-    if(exists("pumpStatus", where=profile@data)){
-      pd = pd[pumpStatus == 1 & pressure > 1]
+    sample_rate = 1 / profiles$data[[input$select_profile]]@metadata$sampleInterval
+    if(input$lag < 0){
+      lag_type = "lead"
+      lag_mod = -1
+    }else{
+      lag_type = "lag"
+      lag_mod = 1
     }
-    ggplot(pd) +
-      geom_path(aes(get(input$filter_x1), pressure, color=dir)) +
-      theme_bw() + scale_y_reverse() +
-      labs(x = input$filter_x1, y="pressure") + theme(legend.position="bottom")
+    if(input$CT_mode){
+      pd = as.data.table(profiles$data[[input$select_profile]]@data)
+      pd[, lagged_C := shift(pd$conductivity, type=lag_type, input$lag * lag_mod)]
+      pd[, recalc_S := oce::swSCTp(lagged_C, temperature, pressure, conductivityUnit="S/m")]
+      ggplot(pd) +
+        geom_path(aes(salinity, pressure), color="black", alpha=0.2) +
+        geom_path(aes(recalc_S, pressure), color="red",  alpha=0.5) +
+        theme_bw() + scale_y_reverse() + scale_color_discrete("") +
+        labs(x = "salinity", y="pressure", title=paste("sample rate", sample_rate))
+    }else{
+      pd = as.data.table(profiles$untrimmed[[input$select_profile]]@data)
+      scan_max_pressure = min(pd[pressure == max(pressure)]$scan)
+      pd[, dir := "down"]
+      pd[scan > scan_max_pressure, dir := "up"]
+      if(exists("pumpStatus", where=pd)){
+        pd = pd[pumpStatus == 1 & pressure > 1]
+      }
+      lagged = shift(pd[[input$filter_x1]], type=lag_type, input$lag * lag_mod)
+      ggplot(pd) +
+        geom_path(aes(get(input$filter_x1), pressure, color=dir), alpha=0.3) +
+        geom_path(aes(lagged, pressure, color=dir)) +
+        theme_bw() + scale_y_reverse() + scale_color_discrete("") +
+        labs(x = input$filter_x1, y="pressure", title=paste("sample rate", sample_rate)) +
+        theme(legend.position="bottom")
+    }
   })
   output$map = renderLeaflet({
     validate(need(!is.null(profiles$data[[input$select_profile]]), "Data not loaded"))
@@ -633,6 +659,21 @@ shinyServer(function(input, output, session) {
       setView(lat = profiles$data[[input$select_profile]]@metadata$latitude,
               lng = profiles$data[[input$select_profile]]@metadata$longitude,
               zoom = 7)
+  })
+  output$drift_plot = renderPlot({
+    validate(need(!is.null(profiles$untrimmed[[input$select_profile]]), "Data not loaded"))
+    pd = as.data.table(profiles$untrimmed[[input$select_profile]]@data)
+    if(exists("pumpStatus", where=pd)){
+      pd = pd[pumpStatus == 1 & pressure > 1]
+    }
+    start_pos = pd[1,.(longitude, latitude)]
+    end_pos = pd[nrow(pd),.(longitude, latitude)]
+    dist_covered = round(geosphere::distGeo(start_pos, end_pos))
+    ggplot(pd) +
+      geom_path(aes(longitude, latitude, color=time)) +
+      viridis::scale_color_viridis() + theme_bw() +
+      labs(title=paste("distance covered =", dist_covered, "(m)"), x="", y="") +
+      coord_map()
   })
   output$datatable = renderDataTable({
     validate(need(profiles$untrimmed, "data not loaded"))

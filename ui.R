@@ -51,7 +51,7 @@ shinyUI(fluidPage(
                    column(4, selectInput("x2", "Secondary (Red) X axis", choices = NULL))
                    ),
                  plotOutput("profile_plot", brush = brushOpts("flag_brush", direction = "xy"), height=800),
-                 h6("Flags and factors are applied to the primary axis only and for all dips"),
+                 h6("Factors are applied to the primary axis only and for all dips"),
                  h4("Flag"),
                  actionButton('apply_flag', "Apply Flag", icon=icon("flag")),
                  inputPanel(
@@ -66,7 +66,14 @@ shinyUI(fluidPage(
                  tableOutput("bottle_coef")
                  ),
         tabPanel("TS Plot", plotOutput("TS_plot", height=700, width=700)),
-        tabPanel("Hysteresis Plot", plotOutput("hyst_plot", height=800)),
+        tabPanel("Drift Plot", plotOutput("drift_plot", height=700, width=700)),
+        tabPanel("Hysteresis Plot",
+                 fluidRow(
+                   checkboxInput("CT_mode", label="CT alignment mode", value=F),
+                   column(3, numericInput("lag", label="Lag (scans)", value=0, step=1)),
+                   column(3, actionButton("apply_lag", "Apply lag", icon=icon("clock")))
+                 ),
+                 plotOutput("hyst_plot", height=800)),
         tabPanel("Filter Plot",
                  fluidRow(
                    column(3, selectInput("filter_x1", "Parameter", choices = NULL)),
