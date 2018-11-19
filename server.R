@@ -252,6 +252,14 @@ shinyServer(function(input, output, session) {
       processingLog(x) = log
       return(x)
     })
+    profiles$untrimmed = lapply(profiles$untrimmed, function(x) {
+      raw = x@data[[input$x1]]
+      mod = (raw * input$factor) + input$offset
+      x@data[[input$x1]] = mod
+      log = paste(input$x1, ",adjusted with factor", input$factor, ", offset", input$offset)
+      processingLog(x) = log
+      return(x)
+    })
   })
 
   observeEvent(input$calc_flu,{
@@ -509,6 +517,7 @@ shinyServer(function(input, output, session) {
     data_ = profiles$untrimmed[[input$select_profile]]
     data_ = subset(data_, scan %between% scan_range)
     profiles$data[[input$select_profile]]@data[[input$filter_x1]] = data_@data[[input$filter_x1]]
+    processingLog(profiles$data[[input$select_profile]]) = paste(input$filter_x1, "low pass filterd with ", input$filter_t, "second time constant")
   })
 
 
@@ -650,6 +659,23 @@ shinyServer(function(input, output, session) {
         labs(x = input$filter_x1, y="pressure", title=paste("sample rate", sample_rate)) +
         theme(legend.position="bottom")
     }
+  })
+  observeEvent(input$apply_lag,{
+    if(input$lag < 0){
+      lag_type = "lead"
+      lag_mod = -1
+    }else{
+      lag_type = "lag"
+      lag_mod = 1
+    }
+    lagged = profiles$data[[input$select_profile]]@data[[input$filter_x1]]
+    lagged = shift(lagged, type=lag_type, input$lag * lag_mod)
+    profiles$data[[input$select_profile]]@data[[input$filter_x1]] = lagged
+    processingLog(profiles$data[[input$select_profile]]) = paste(input$filter_x1, "lagged by", input$lag, "scans")
+
+    lagged = profiles$untrimmed[[input$select_profile]]@data[[input$filter_x1]]
+    lagged = shift(lagged, type=lag_type, input$lag * lag_mod)
+    profiles$untrimmed[[input$select_profile]]@data[[input$filter_x1]] = lagged
   })
   output$map = renderLeaflet({
     validate(need(!is.null(profiles$data[[input$select_profile]]), "Data not loaded"))
