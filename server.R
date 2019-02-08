@@ -23,17 +23,6 @@ ctd_columns = list(
   )
 vchannels = c("v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7")
 
-# TODO generate these serials from XML
-temperature_serials = c("5558", "5823", "6267", "6268")
-conductivity_serials = c("4499", "4523", "4724", "4725")
-pressure_serials = c("1274", "1343")
-par_serials = c("49", "71")
-altimeter_serials = c("68799", "73082")
-turbidity_serials = c("11618", "14426")
-fluorometer_serials = c("2315", "3817")
-optode_serials = c("752", "680")
-rinko_serials = c("0263")
-
 # runUrl("https://bitbucket.org/betascoo8/ctdqc/get/dev.zip")
 
 shinyServer(function(input, output, session) {
@@ -62,9 +51,9 @@ shinyServer(function(input, output, session) {
       return(NULL)
       }
     dir = parseDirPath(volumes, input$directory)
-    d = list()
-    m = list()
-    h = list()
+    d = list() # data
+    m = list() # metadata
+    h = list() # header (the xml)
     config = list()
     withProgress(message = 'loading files...', value = 0, {
       for(i in filelist){
@@ -418,7 +407,6 @@ shinyServer(function(input, output, session) {
     })
   })
 
-  # TODO add remove variable function
   observeEvent(input$remove_variable,{
     #
     try({
@@ -429,7 +417,6 @@ shinyServer(function(input, output, session) {
   })
 
   ## Write out
-
   observeEvent(input$write_rdata,{
     dir = parseDirPath(volumes, input$directory)
     session = list()
@@ -706,11 +693,10 @@ shinyServer(function(input, output, session) {
     data.frame(profiles$untrimmed[[input$select_profile]]@data)
   })
   output$bottles = renderRHandsontable({
-      # editable table
-
     validate(need(profiles$bottles, "bottle file not loaded"))
-
+        # identify the salinity columns so we can add more decimal places later
     avail_sal_cols = colnames(profiles$bottles)[chmatch(c("salinity", "salinity2", "bottle_sal"), colnames(profiles$bottles))]
+      # editable table
     rhandsontable(profiles$bottles, readOnly = T, digits = 6, highlightRow = T) %>%
       hot_col(c("bottle_sal", "bottle_O2", "bottle_Chl"), readOnly = F) %>%
       hot_col(na.omit(avail_sal_cols), format = "0.0000") %>%
@@ -767,7 +753,7 @@ shinyServer(function(input, output, session) {
   output$bottle_coef = renderTable({
     print(rbindlist(profiles$bottle_coef))
     rbindlist(profiles$bottle_coef)
-  })
+  }, digits = 4)
   output$chl_coef = renderTable({
     data.frame(profiles$bottle_coef[["fluorescence"]])
   })
@@ -792,6 +778,15 @@ shinyServer(function(input, output, session) {
     })
   })
 
+  output$publish_param = renderRHandsontable({
+    validate(need(profiles$global_config, "data not loaded"))
+    tbl = generate_parameter_table(profiles, sensor_metadata)
+    tbl$publish = T
+    rhandsontable(tbl, readOnly=F) %>%
+      hot_col(c("parameter", "instid", "sbe_name"), readOnly=T)
+  })
+
+    # generate dynamic UI depending on which sensors are in the config
   output$sensor_ui = renderUI({
     validate(need(profiles$config, "data not loaded"))
     ui = list()

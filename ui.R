@@ -121,7 +121,8 @@ shinyUI(fluidPage(
           fluidRow(
             column(6,
               h4("Global metadata"),
-              uiOutput("edit_metadata")
+              uiOutput("edit_metadata"),
+              rHandsontableOutput("publish_param")
               ),
             column(6)
             ),
