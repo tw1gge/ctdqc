@@ -229,6 +229,27 @@ netcdf.metadata <- function(d, positions){
   return(metadata)
 }
 
+cell_thermal_mass <- function(){
+  # The algorithm used is:
+  # SBE 9plus with TC duct and 3000 rpm pump
+  # alpha 1/beta
+  # 0.03 7.0
+  #   a = 2 * alpha / (sample interval * beta + 2)
+  #   b = 1 - (2 * a / alpha)
+  #   dc/dT = 0.1 * (1 + 0.006 * [temperature - 20])
+  #   dT = temperature - previous temperature
+  #   ctm [S/m] = -1.0 * b * previous ctm + a * (dc/dT) * dT
+  #   where
+  #   sample interval is measured in seconds and temperature in °C, and ctm is calculated in S/m.
+  #
+  #   If the input file contains conductivity in units other than S/m, Cell Thermal Mass applies the following scale factors to the calculated ctm:
+  #     ctm [mS/cm] = ctm [S/m] * 10.0
+  #   ctm [µS/cm] = ctm [S/m] * 10000.0
+  #
+  #   corrected conductivity = c + ctm
+
+}
+
 flag_extra_pump <- function(oce, scans=50){
   if(exists("pumpStatus", where=oce@data)){
     pumpStatus = oce@data[["pumpStatus"]]
@@ -241,20 +262,43 @@ flag_extra_pump <- function(oce, scans=50){
   return(oce)
 }
 
+generate_parameter_table <- function(session, sensor_metadata){
+  tbl = sensor_metadata[,.(parameter, instid, sbe_name)]
+  available_params = unique(unlist(lapply(session$data , function(x) names(`@`( x , data))))) # eugh
+  tbl = tbl[parameter %in% available_params]
+  serials = session$global_config$serial
+  names = session$global_config$sbename
+  for(i in 1:nrow(tbl)){
+    par = tbl[i]$sbe_name
+    if(par %in% names){
+      ser = serials[grepl(par, names, ignore.case=T)]
+      tbl[i, serial := ser[1]]
+    }else{
+      if(par != ""){
+        ser = serials[grepl(par, session$global_config$comment)]
+        tbl[i, serial := ser[1]]
+      }
+    }
+  }
+  tbl$comment = ""
+  return(tbl)
+}
+
 write.ctd.netcdf <- function(session, sensor_metadata){
-  require(RNetCDF)
+  require(ncdf4)
   require(uuid)
   require(reshape2)
-  # load("C:/CEND_22_16/CTDQC.rdata")
-  # sensor_metadata = fread("sensor_table.csv")
+  options(stringsAsFactors=F)
+  load("CTDQC.rdata")
+  sensor_metadata = fread("sensor_table.csv")
 
   # validates that all QC steps are done
   log = rbindlist(lapply(session$data , function(x) as.data.frame(`@`( x , processingLog))), idcol=T)
   logsummary = log[,.(QC = any(grepl("QC Complete", value))), by=.id] # are any of the values...
 
   if(all(logsummary$QC) == F){
-    warning("WARNING - QC not complete")
-    return(NULL)
+    warning("WARNING - QC check not complete")
+    # return(NULL)
   }
 
   # reshape and process data
@@ -272,8 +316,14 @@ write.ctd.netcdf <- function(session, sensor_metadata){
   v_station = lapply(session$data , function(x) as.data.frame(`@`( x , metadata)["station"]))
   v_station = rbindlist(v_station, idcol="id")
 
-    # check station numbers unique
+    # check station numbers unique and tidy
+  v_station[, stn := as.numeric(stringr::str_extract(station, "[0-9]+$"))]
+  if(anyDuplicated(v_station$station)){
+    warning("duplicate stations!")
+    stop()
+  }
 
+    # build master table
   sb = rbindlist(lapply(session$data , function(x) as.data.frame(`@`( x , data))),
                  idcol="id", use.names=T, fill=T)
   sb = merge(v_station, sb, by="id", all.x = T)
@@ -292,8 +342,16 @@ write.ctd.netcdf <- function(session, sensor_metadata){
     att.put.nc(nc, "pressure", "units", "NC_CHAR", "dbar")
     att.put.nc(nc, "pressure", "axis", "NC_CHAR", "pressure")
     att.put.nc(nc, "pressure", "positive", "NC_CHAR", "down")
-    att.put.nc(nc, "pressure", "comment", "NC_CHAR", "pressure from Digiquartz pressure transducer")
+    att.put.nc(nc, "pressure", "comment", "NC_CHAR", "")
+    att.put.nc(nc, var, "instrument", "NC_CHAR", "inst_prs")
     var.put.nc(nc, "pressure", deepest_dip$pressure)
+
+    var.def.nc(nc, "inst_prs", "NC_BYTE", "profile")
+      att.put.nc(nc, "inst_prs", "long_name", "NC_CHAR", metadata$sensor_name)
+      att.put.nc(nc, "inst_prs", "nodc_name", "NC_CHAR", metadata$sensor_nodc)
+      att.put.nc(nc, "inst_prs", "make_model", "NC_CHAR", metadata$sensor_make)
+      att.put.nc(nc, "inst_prs", "serial_number", "NC_CHAR", as.character(metadata$serial))
+      att.put.nc(nc, "inst_prs", "precision", "NC_CHAR", as.character(metadata$precision))
 
   var.def.nc(nc, "profile", "NC_INT", "profile")
     att.put.nc(nc, "profile", "long_name", "NC_CHAR", "Unique identifier for each feature instance")
