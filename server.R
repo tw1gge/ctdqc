@@ -468,7 +468,7 @@ shinyServer(function(input, output, session) {
 
   observeEvent(input$write_netcdf, {
     publish_param = data.table(hot_to_r(input$publish_param))[publish == T]
-    write.ctd.netcdf(profiles, sensor_metadata, publish_param)
+    write.ctd.netcdf(profiles, sensor_metadata, publish_param, input$decimate)
   })
 
   observeEvent(input$prev_filter, {

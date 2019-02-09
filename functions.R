@@ -290,10 +290,12 @@ write.ctd.netcdf <- function(session, sensor_metadata, publish_param, decimate =
   require(uuid)
   require(reshape2)
   options(stringsAsFactors=F)
-  print(publish_param)
-  return(NULL)
-  # load("CTDQC.rdata")
-  # sensor_metadata = fread("sensor_table.csv")
+    # testing
+  load("CTDQC.rdata")
+  sensor_metadata = fread("sensor_table.csv")
+  decimate = 0.5
+  publish_param = generate_parameter_table(session, sensor_metadata)
+  publish_param$publish = T
   # http://cfconventions.org/Data/cf-standard-names/34/build/cf-standard-name-table.html
 
   # validates that all QC steps are done
@@ -301,7 +303,7 @@ write.ctd.netcdf <- function(session, sensor_metadata, publish_param, decimate =
   logsummary = log[,.(QC = any(grepl("QC Complete", value))), by=.id] # are any of the values...
 
   if(all(logsummary$QC) == F){
-    warning("WARNING - QC check not complete")
+    warning("WARNING - QC check not implemented")
     # return(NULL)
   }
 
@@ -327,8 +329,8 @@ write.ctd.netcdf <- function(session, sensor_metadata, publish_param, decimate =
   sb[, pressure := round(pressure / decimate) * decimate]
   sb = sb[!is.na(pressure),lapply(.SD, mean, na.rm=T), by=list(id, pressure)]
   max_pressure = max(sb$pressure)
-  pressures = data.table(id = rep(v_station$id, max_pressure+1))
-  pressures[, pressure := 0:(.N-1), by=id]
+  pressures = data.table(id = rep(v_station$id, (max_pressure / decimate)+1))
+  pressures[, pressure := seq(0, max_pressure, by=decimate), by=id]
   sb = merge(pressures, sb, by=c("id", "pressure"), all.x=T)
   sb = merge(v_station, sb, by="id")[order(station, pressure)]
 
@@ -339,7 +341,7 @@ write.ctd.netcdf <- function(session, sensor_metadata, publish_param, decimate =
   nc = create.nc(paste0(session$global_metadata$id, ".nc"))
 
   # Dimensions
-  dim.def.nc(nc, "pressure", max_pressure)
+  dim.def.nc(nc, "pressure", (max_pressure / decimate) + 1)
   dim.def.nc(nc, "profile", length(unique(sb$id)))
 
   var.def.nc(nc, "profile", "NC_INT", "profile")
@@ -384,15 +386,14 @@ write.ctd.netcdf <- function(session, sensor_metadata, publish_param, decimate =
     att.put.nc(nc, "crs", "inverse_flattening", "NC_DOUBLE", 298.257223563)
 
   for(var in publish_param$parameter){
-      # data
-    if(var == "pressure"){
-      metadata = sensor_metadata[variable == var]
-      metadata[, serial := publish_param[parameter == var]$serial]
+    metadata = sensor_metadata[parameter == var]
+    metadata[, serial := publish_param[parameter == var]$serial]
         # covert to array for netcdf
-      v_ = sb[,c("pressure", "station", "pressure"), with=F]
-      v_ = reshape2::acast(v_, pressure ~ station, value.var="pressure")
+    v_ = sb[,c("pressure", "station", metadata$parameter), with=F]
+    v_ = reshape2::acast(v_, pressure ~ station, value.var=var)
 
-      var.def.nc(nc, var, "NC_INT", c("pressure", "profile"))
+    if(var == "pressure"){ # treat pressure different, need AXIS
+      var.def.nc(nc, var, "NC_DOUBLE", c("pressure", "profile"))
         att.put.nc(nc, var, "long_name", "NC_CHAR", metadata$long_name)
         att.put.nc(nc, var, "standard_name", "NC_CHAR", metadata$standard_name)
         att.put.nc(nc, var, "units", "NC_CHAR", metadata$units)
@@ -414,11 +415,6 @@ write.ctd.netcdf <- function(session, sensor_metadata, publish_param, decimate =
         att.put.nc(nc, metadata$instid, "precision", "NC_CHAR", as.character(metadata$precision))
 
     }else{
-      metadata = sensor_metadata[variable == var]
-        # covert to array for netcdf
-      v_ = sb[,c("pressure", "station", metadata$parameter), with=F]
-      v_ = reshape2::acast(v_, pressure ~ station, value.var=var)
-
       var.def.nc(nc, var, "NC_DOUBLE", c("pressure", "profile"))
         att.put.nc(nc, var, "long_name", "NC_CHAR", metadata$long_name)
         att.put.nc(nc, var, "standard_name", "NC_CHAR", metadata$standard_name)
