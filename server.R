@@ -466,18 +466,9 @@ shinyServer(function(input, output, session) {
     })
   })
 
-  observeEvent(input$make_netcdf, {
-    sensor_metadata[variable == "temperature", serial := input$serial_temp]
-    sensor_metadata[variable == "conductivity", serial := input$serial_cond]
-    sensor_metadata[variable == "salinity", serial := input$serial_prs]
-    sensor_metadata[variable == "pressure", serial := input$serial_prs]
-    sensor_metadata[variable == "altimeter", serial := input$serial_alt]
-    sensor_metadata[variable == "turbidity", serial := input$serial_ftu]
-    sensor_metadata[variable == "fluorescence", serial := input$serial_flu]
-    sensor_metadata[variable == "oxygen_RINKO", serial := input$serial_rinko]
-    sensor_metadata[variable == "oxygen_optode", serial := input$serial_optode]
-    sensor_metadata[variable == "par", serial := input$serial_par]
-    write.ctd.netcdf(profiles, sensor_metadata)
+  observeEvent(input$write_netcdf, {
+    publish_param = data.table(hot_to_r(input$publish_param))[publish == T]
+    write.ctd.netcdf(profiles, sensor_metadata, publish_param)
   })
 
   observeEvent(input$prev_filter, {

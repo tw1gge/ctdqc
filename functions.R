@@ -1,4 +1,5 @@
 
+# TODO pick a style of function names and stick with it :(
   #### Sensor coefficents
 
 rinko_coefs = list(serial = "#0263 ARO-CAV", A = -42.34162, B = +127.6475, C = -0.3677435, D = +0.01137, E = +0.0046, F = +7.57e-05)
@@ -284,13 +285,16 @@ generate_parameter_table <- function(session, sensor_metadata){
   return(tbl)
 }
 
-write.ctd.netcdf <- function(session, sensor_metadata){
-  require(ncdf4)
+write.ctd.netcdf <- function(session, sensor_metadata, publish_param, decimate = 1){
+  require(RNetCDF)
   require(uuid)
   require(reshape2)
   options(stringsAsFactors=F)
-  load("CTDQC.rdata")
-  sensor_metadata = fread("sensor_table.csv")
+  print(publish_param)
+  return(NULL)
+  # load("CTDQC.rdata")
+  # sensor_metadata = fread("sensor_table.csv")
+  # http://cfconventions.org/Data/cf-standard-names/34/build/cf-standard-name-table.html
 
   # validates that all QC steps are done
   log = rbindlist(lapply(session$data , function(x) as.data.frame(`@`( x , processingLog))), idcol=T)
@@ -300,12 +304,6 @@ write.ctd.netcdf <- function(session, sensor_metadata){
     warning("WARNING - QC check not complete")
     # return(NULL)
   }
-
-  # reshape and process data
-  pressures = lapply(session$data , function(x) as.data.frame(`@`( x , data)["pressure"]))
-  pressures = rbindlist(pressures, idcol="id")
-  pressures[, max := max(pressure), by=id]
-  deepest_dip = pressures[max(max) == max]
 
   v_lat = lapply(session$data , function(x) as.data.frame(`@`( x , metadata)["latitude"]))
   v_lat = rbindlist(v_lat, idcol="id")
@@ -317,7 +315,7 @@ write.ctd.netcdf <- function(session, sensor_metadata){
   v_station = rbindlist(v_station, idcol="id")
 
     # check station numbers unique and tidy
-  v_station[, stn := as.numeric(stringr::str_extract(station, "[0-9]+$"))]
+  v_station[, station := as.numeric(stringr::str_extract(station, "[0-9]+$"))]
   if(anyDuplicated(v_station$station)){
     warning("duplicate stations!")
     stop()
@@ -326,32 +324,23 @@ write.ctd.netcdf <- function(session, sensor_metadata){
     # build master table
   sb = rbindlist(lapply(session$data , function(x) as.data.frame(`@`( x , data))),
                  idcol="id", use.names=T, fill=T)
-  sb = merge(v_station, sb, by="id", all.x = T)
+  sb[, pressure := round(pressure / decimate) * decimate]
+  sb = sb[!is.na(pressure),lapply(.SD, mean, na.rm=T), by=list(id, pressure)]
+  max_pressure = max(sb$pressure)
+  pressures = data.table(id = rep(v_station$id, max_pressure+1))
+  pressures[, pressure := 0:(.N-1), by=id]
+  sb = merge(pressures, sb, by=c("id", "pressure"), all.x=T)
+  sb = merge(v_station, sb, by="id")[order(station, pressure)]
 
   sensor_metadata = sensor_metadata[parameter %in% colnames(sb)]
+
 
   # setup netcdf
   nc = create.nc(paste0(session$global_metadata$id, ".nc"))
 
   # Dimensions
-  dim.def.nc(nc, "pressure", length(deepest_dip$pressure))
-  dim.def.nc(nc, "profile", length(session$data))
-
-  var.def.nc(nc, "pressure", "NC_FLOAT", "pressure")
-    att.put.nc(nc, "pressure", "standard_name", "NC_CHAR", "sea_water_pressure")
-    att.put.nc(nc, "pressure", "units", "NC_CHAR", "dbar")
-    att.put.nc(nc, "pressure", "axis", "NC_CHAR", "pressure")
-    att.put.nc(nc, "pressure", "positive", "NC_CHAR", "down")
-    att.put.nc(nc, "pressure", "comment", "NC_CHAR", "")
-    att.put.nc(nc, var, "instrument", "NC_CHAR", "inst_prs")
-    var.put.nc(nc, "pressure", deepest_dip$pressure)
-
-    var.def.nc(nc, "inst_prs", "NC_BYTE", "profile")
-      att.put.nc(nc, "inst_prs", "long_name", "NC_CHAR", metadata$sensor_name)
-      att.put.nc(nc, "inst_prs", "nodc_name", "NC_CHAR", metadata$sensor_nodc)
-      att.put.nc(nc, "inst_prs", "make_model", "NC_CHAR", metadata$sensor_make)
-      att.put.nc(nc, "inst_prs", "serial_number", "NC_CHAR", as.character(metadata$serial))
-      att.put.nc(nc, "inst_prs", "precision", "NC_CHAR", as.character(metadata$precision))
+  dim.def.nc(nc, "pressure", max_pressure)
+  dim.def.nc(nc, "profile", length(unique(sb$id)))
 
   var.def.nc(nc, "profile", "NC_INT", "profile")
     att.put.nc(nc, "profile", "long_name", "NC_CHAR", "Unique identifier for each feature instance")
@@ -364,7 +353,7 @@ write.ctd.netcdf <- function(session, sensor_metadata){
     att.put.nc(nc, "time", "calendar", "NC_CHAR", "gregorian") # note POSIXct assumes gregorian calendar
     att.put.nc(nc, "time", "axis", "NC_CHAR", "T")
     att.put.nc(nc, "time", "_FillValue", "NC_DOUBLE", -99999)
-    att.put.nc(nc, "time", "comment", "NC_CHAR", "Time from ship GPS")
+    att.put.nc(nc, "time", "comment", "NC_CHAR", "Time from ship GPS NMEA")
     var.put.nc(nc, "time", as.numeric(v_time$startTime))
 
   var.def.nc(nc, "lat", "NC_DOUBLE", "profile")
@@ -374,7 +363,7 @@ write.ctd.netcdf <- function(session, sensor_metadata){
     att.put.nc(nc, "lat", "valid_min", "NC_FLOAT", -90)
     att.put.nc(nc, "lat", "valid_max", "NC_FLOAT", 90)
     att.put.nc(nc, "lat", "grid_mapping", "NC_CHAR", "crs")
-    att.put.nc(nc, "lat", "comment", "NC_CHAR", "Position from ship GPS")
+    att.put.nc(nc, "lat", "comment", "NC_CHAR", "Position from ship GPS NMEA")
     var.put.nc(nc, "lat", v_lat$latitude)
 
   var.def.nc(nc, "lon", "NC_DOUBLE", "profile")
@@ -384,7 +373,7 @@ write.ctd.netcdf <- function(session, sensor_metadata){
     att.put.nc(nc, "lon", "valid_min", "NC_FLOAT", -180)
     att.put.nc(nc, "lon", "valid_max", "NC_FLOAT", 180)
     att.put.nc(nc, "lon", "grid_mapping", "NC_CHAR", "crs")
-    att.put.nc(nc, "lon", "comment", "NC_CHAR", "Position from ship GPS")
+    att.put.nc(nc, "lon", "comment", "NC_CHAR", "Position from ship GPS NMEA")
     var.put.nc(nc, "lon", v_lon$longitude)
 
   var.def.nc(nc, "crs", "NC_INT", NA) # WGS84
@@ -394,32 +383,63 @@ write.ctd.netcdf <- function(session, sensor_metadata){
     att.put.nc(nc, "crs", "semi_major_axis", "NC_DOUBLE", 6378137.0)
     att.put.nc(nc, "crs", "inverse_flattening", "NC_DOUBLE", 298.257223563)
 
-  for(var in sensor_metadata$variable){
+  for(var in publish_param$parameter){
       # data
-    metadata = sensor_metadata[variable == var]
-      # covert to array for netcdf
-    v_ = sb[,c("pressure", "station", metadata$parameter), with=F]
-    v_ = reshape2::acast(v_, pressure ~ station)
+    if(var == "pressure"){
+      metadata = sensor_metadata[variable == var]
+      metadata[, serial := publish_param[parameter == var]$serial]
+        # covert to array for netcdf
+      v_ = sb[,c("pressure", "station", "pressure"), with=F]
+      v_ = reshape2::acast(v_, pressure ~ station, value.var="pressure")
 
-    var.def.nc(nc, var, "NC_DOUBLE", c("pressure", "profile"))
-      att.put.nc(nc, var, "long_name", "NC_CHAR", metadata$long_name)
-      att.put.nc(nc, var, "standard_name", "NC_CHAR", metadata$standard_name)
-      att.put.nc(nc, var, "units", "NC_CHAR", metadata$units)
-      att.put.nc(nc, var, "_FillValue", "NC_DOUBLE", as.numeric(metadata$`_fillValue`))
-      att.put.nc(nc, var, "valid_min", "NC_DOUBLE", as.numeric(metadata$valid_min))
-      att.put.nc(nc, var, "valid_max", "NC_DOUBLE", as.numeric(metadata$valid_max))
-      att.put.nc(nc, var, "coordinates", "NC_CHAR", "time lat lon pressure" )
-      att.put.nc(nc, var, "instrument", "NC_CHAR", metadata$instid)
-      att.put.nc(nc, var, "grid_mapping", "NC_CHAR", "crs" )
-      att.put.nc(nc, var, "coverage_content_type", "NC_CHAR", "physicalMeasurement" )
-      var.put.nc(nc, var, v_)
+      var.def.nc(nc, var, "NC_INT", c("pressure", "profile"))
+        att.put.nc(nc, var, "long_name", "NC_CHAR", metadata$long_name)
+        att.put.nc(nc, var, "standard_name", "NC_CHAR", metadata$standard_name)
+        att.put.nc(nc, var, "units", "NC_CHAR", metadata$units)
+        att.put.nc(nc, var, "_FillValue", "NC_DOUBLE", as.numeric(metadata$`_fillValue`))
+        att.put.nc(nc, var, "axis", "NC_CHAR", "Z")
+        att.put.nc(nc, var, "valid_min", "NC_DOUBLE", as.numeric(metadata$valid_min))
+        att.put.nc(nc, var, "valid_max", "NC_DOUBLE", as.numeric(metadata$valid_max))
+        att.put.nc(nc, var, "coordinates", "NC_CHAR", "time lat lon pressure" )
+        att.put.nc(nc, var, "instrument", "NC_CHAR", metadata$instid)
+        att.put.nc(nc, var, "grid_mapping", "NC_CHAR", "crs" )
+        att.put.nc(nc, var, "coverage_content_type", "NC_CHAR", "physicalMeasurement" )
+        var.put.nc(nc, var, v_)
 
-    var.def.nc(nc, metadata$instid, "NC_BYTE", "profile")
-      att.put.nc(nc, metadata$instid, "long_name", "NC_CHAR", metadata$sensor_name)
-      att.put.nc(nc, metadata$instid, "nodc_name", "NC_CHAR", metadata$sensor_nodc)
-      att.put.nc(nc, metadata$instid, "make_model", "NC_CHAR", metadata$sensor_make)
-      att.put.nc(nc, metadata$instid, "serial_number", "NC_CHAR", as.character(metadata$serial))
-      att.put.nc(nc, metadata$instid, "precision", "NC_CHAR", as.character(metadata$precision))
+      var.def.nc(nc, metadata$instid, "NC_BYTE", "profile")
+        att.put.nc(nc, metadata$instid, "long_name", "NC_CHAR", metadata$sensor_name)
+        att.put.nc(nc, metadata$instid, "nodc_name", "NC_CHAR", metadata$sensor_nodc)
+        att.put.nc(nc, metadata$instid, "make_model", "NC_CHAR", metadata$sensor_make)
+        att.put.nc(nc, metadata$instid, "serial_number", "NC_CHAR", as.character(metadata$serial))
+        att.put.nc(nc, metadata$instid, "precision", "NC_CHAR", as.character(metadata$precision))
+
+    }else{
+      metadata = sensor_metadata[variable == var]
+        # covert to array for netcdf
+      v_ = sb[,c("pressure", "station", metadata$parameter), with=F]
+      v_ = reshape2::acast(v_, pressure ~ station, value.var=var)
+
+      var.def.nc(nc, var, "NC_DOUBLE", c("pressure", "profile"))
+        att.put.nc(nc, var, "long_name", "NC_CHAR", metadata$long_name)
+        att.put.nc(nc, var, "standard_name", "NC_CHAR", metadata$standard_name)
+        att.put.nc(nc, var, "units", "NC_CHAR", metadata$units)
+        att.put.nc(nc, var, "_FillValue", "NC_DOUBLE", as.numeric(metadata$`_fillValue`))
+        att.put.nc(nc, var, "valid_min", "NC_DOUBLE", as.numeric(metadata$valid_min))
+        att.put.nc(nc, var, "valid_max", "NC_DOUBLE", as.numeric(metadata$valid_max))
+        att.put.nc(nc, var, "coordinates", "NC_CHAR", "time lat lon pressure" )
+        att.put.nc(nc, var, "instrument", "NC_CHAR", metadata$instid)
+        att.put.nc(nc, var, "grid_mapping", "NC_CHAR", "crs" )
+        att.put.nc(nc, var, "coverage_content_type", "NC_CHAR", "physicalMeasurement" )
+        var.put.nc(nc, var, v_)
+
+      var.def.nc(nc, metadata$instid, "NC_BYTE", "profile")
+        att.put.nc(nc, metadata$instid, "long_name", "NC_CHAR", metadata$sensor_name)
+        att.put.nc(nc, metadata$instid, "nodc_name", "NC_CHAR", metadata$sensor_nodc)
+        att.put.nc(nc, metadata$instid, "make_model", "NC_CHAR", metadata$sensor_make)
+        att.put.nc(nc, metadata$instid, "serial_number", "NC_CHAR", as.character(metadata$serial))
+        att.put.nc(nc, metadata$instid, "precision", "NC_CHAR", as.character(metadata$precision))
+
+    }
   }
 
   for(g in names(session$global_metadata)){

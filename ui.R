@@ -116,7 +116,7 @@ shinyUI(fluidPage(
           actionButton('decimate', "Decimate", icon=icon("delicious")),
           numericInput('bin_size', "Bin Size (m)", min = 0.5, max = 5, value = 0.5, step = 0.5),
           br(),
-          actionButton('make_netcdf', "Publish NetCDF", icon=icon("object-group")),
+          actionButton('write_netcdf', "Publish NetCDF", icon=icon("object-group")),
           actionButton('write_csv', "Write csv's", icon=icon("table")),
           fluidRow(
             column(6,
