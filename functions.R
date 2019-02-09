@@ -285,7 +285,7 @@ generate_parameter_table <- function(session, sensor_metadata){
   return(tbl)
 }
 
-write.ctd.netcdf <- function(session, sensor_metadata, publish_param, decimate = 1){
+write.ctd.netcdf <- function(session, sensor_metadata, publish_param, decimate = 1, dir){
   require(RNetCDF)
   require(uuid)
   require(reshape2)
@@ -338,7 +338,9 @@ write.ctd.netcdf <- function(session, sensor_metadata, publish_param, decimate =
 
 
   # setup netcdf
-  nc = create.nc(paste0(session$global_metadata$id, ".nc"))
+  filename = paste0(dir, "/", session$global_metadata$id, ".nc")
+  print(filename)
+  nc = create.nc(filename)
 
   # Dimensions
   dim.def.nc(nc, "pressure", (max_pressure / decimate) + 1)
@@ -447,7 +449,9 @@ write.ctd.netcdf <- function(session, sensor_metadata, publish_param, decimate =
   att.put.nc(nc, "NC_GLOBAL", "geospatial_lon_max", "NC_FLOAT", max(v_lon$longitude))
 
   sync.nc(nc)
+  print.nc(nc)
   close.nc(nc)
+  return(filename)
 }
 
 read.sbe.ros <- function(file=NA, folder){
