@@ -251,6 +251,16 @@ cell_thermal_mass <- function(){
 
 }
 
+update_sbe_log <- function(oce){
+  sbedata= list()
+  sbedata_strings = c("# datcnv_", "# filter_", "# celltm_", "# Derive_", "# test_")
+  for(i in sbedata_strings){
+    log = oce@metadata$header[grepl(i, oce@metadata$header)]
+    for(l in log){ processingLog(oce) = l }
+  }
+  return(oce)
+}
+
 flag_extra_pump <- function(oce, scans=50){
   if(exists("pumpStatus", where=oce@data)){
     pumpStatus = oce@data[["pumpStatus"]]

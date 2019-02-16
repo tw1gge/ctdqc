@@ -61,12 +61,13 @@ shinyServer(function(input, output, session) {
         incProgress(1/length(filelist), detail = paste("loading", i))
         print(i)
         d[[i]] = read.ctd.sbe(paste0(dir,"/",i), columns = ctd_columns) # oce data
+        d[[i]] = update_sbe_log(d[[i]])
         # d[[i]] = calc_descent_rate(d[[i]])
         if(!"pumpStatus" %in% names(d[[i]]@data)){
           print("pumpStatus not found, assuming pump is on")
           d[[i]]@data[["pumpStatus"]] = rep(1, length(d[[i]]@data$scan))
         }
-        d[[i]] = flag_extra_pump(d[[i]], 100)
+        d[[i]] = flag_extra_pump(d[[i]], 100) # delay pump = 1 for another 100 scans
         h[[i]] = parse_sbe_xml(d[[i]])
         config[[i]] = extract.xml_channel_config(h[[i]])
       }
