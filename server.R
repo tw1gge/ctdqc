@@ -461,7 +461,7 @@ shinyServer(function(input, output, session) {
         }
         p = substr(p, 1, nchar(p)-4) # drop the .cnv from filename
         write.csv(d, file = paste0(dir, "/", p, ".csv"))
-        write.csv(as.data.table(log[[p]]), file = paste0(dir, "/", p, ".log"))
+        capture.output(summary(profiles$data[[p]]), con="test.log")
       }
     })
   })
