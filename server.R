@@ -590,7 +590,9 @@ shinyServer(function(input, output, session) {
       pd[, filter := NaN] # so ggplot won't plot it
     }
     if(exists("pumpStatus", where=pd)){
-      pd = pd[pumpStatus == 1 & pressure > 1]
+      pd = pd[pumpStatus == 1 & pressure > 3]
+    }else{
+      pd = pd[pressure > 3]
     }
     ggplot(pd) +
       geom_path(aes(time, filter), color="red") +
@@ -628,7 +630,9 @@ shinyServer(function(input, output, session) {
       pd[, dir := "down"]
       pd[scan > scan_max_pressure, dir := "up"]
       if(exists("pumpStatus", where=pd)){
-        pd = pd[pumpStatus == 1 & pressure > 1]
+        pd = pd[pumpStatus == 1 & pressure > 3]
+      }else{
+        pd = pd[pressure > 3]
       }
       lagged = shift(pd[[input$filter_x1]], type=lag_type, input$lag * lag_mod)
       ggplot(pd) +
