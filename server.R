@@ -16,6 +16,7 @@ library(geosphere, quietly=T)
 
 source("functions.R", local = T)
 CTDQC_version = "2.0"
+# tested against oce version 1.0-1
 editable_metadata = c("id", "title", "summary", "processing_level", "comment", "acknowledgment", "licence", "project", "creator", "creator_email")
 sensor_metadata = fread("sensor_table.csv")
 ctd_columns = list(
@@ -28,12 +29,13 @@ vchannels = c("v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7")
 shinyServer(function(input, output, session) {
 
   # find OS disk drives
-  volumes = getVolumesFast()
-  # volumes = c("A:" = "C:/Users/th05/Dropbox (CEFAS)/CTD", volumes)
-  volumes = c("A:" = "H:/Dropbox (CEFAS)/CTD", volumes)
-  # if(dir.exists("\\\\lowfilecds\\Function\\SmartBuoyData\\CTD - SBE")){
-    # volumes = c("SmartBuoyData:" = "\\\\lowfilecds\\Function\\SmartBuoyData\\CTD - SBE", "C:" = "C:")
-  # }
+  # volumes = getVolumesFast()
+  if(dir.exists("\\\\lowfilecds\\Function\\SmartBuoyData\\CTD - SBE")){
+    volumes = c("SmartBuoyData:" = "\\\\lowfilecds\\Function\\SmartBuoyData\\CTD - SBE", "C:" = "C:")
+  }
+  if(dir.exists(paste0(Sys.getenv("USERPROFILE"),"\\Dropbox (CEFAS)\\CTD"))){
+    volumes = c("Dropbox:" = paste0(Sys.getenv("USERPROFILE"),"\\Dropbox (CEFAS)\\CTD"), volumes)
+  }
   shinyDirChoose(input, 'directory', roots=volumes, session=session, restrictions=system.file(package='base'), updateFreq=500)
   output$directory = renderText({paste0(parseDirPath(volumes, input$directory), "/")})
   # make dynamic file list for storing the CTD objects, a list of S4 objects
@@ -709,7 +711,7 @@ shinyServer(function(input, output, session) {
            col = "blue", ylab = "Salinity bottle", xlab = "CT", main = "CT vs Niskin, Primary CT",
            sub = paste0("y = ", round(coef(m)[1], 3), " + ", round(coef(m)[2], 3),"x"))
       abline(m)
-      hist(m$residuals, main = "Residuals (Primary CT)")
+      hist(m$residuals, main = "Residuals (Primary CT)", breaks=10)
       profiles$bottle_coef[["salinity"]] = list(var = "salinity", slope = coef(m)[2], intercept = coef(m)[1])
     }
     if(input$Plot_bottle_select == "Oxygen Optode"){
@@ -720,7 +722,7 @@ shinyServer(function(input, output, session) {
            col = "green", ylab = "Winkler", xlab = "Optode", main = "Optode vs Winkler",
            sub = paste0("y = ", round(coef(m)[1], 3), " + ", round(coef(m)[2], 3),"x"))
       abline(m)
-      hist(m$residuals, main = "Residuals")
+      hist(m$residuals, main = "Residuals", breaks=10)
       profiles$bottle_coef[["oxygen_optode"]] = list(var = "oxygen_optode", slope = coef(m)[2], intercept = coef(m)[1])
     }
     if(input$Plot_bottle_select == "Oxygen RINKO"){
@@ -731,7 +733,7 @@ shinyServer(function(input, output, session) {
            col = "green", ylab = "Winkler", xlab = "RINKO", main = "RINKO vs Winkler",
            sub = paste0("y = ", round(coef(m)[1], 3), " + ", round(coef(m)[2], 3),"x"))
       abline(m)
-      hist(m$residuals, main = "Residuals")
+      hist(m$residuals, main = "Residuals", breaks=10)
       profiles$bottle_coef[["oxygen_RINKO"]] = list(var = "oxygen_RINKO", slope = coef(m)[2], intercept = coef(m)[1])
     }
     if(input$Plot_bottle_select == "Chlorophyll"){
@@ -799,7 +801,7 @@ shinyServer(function(input, output, session) {
     if(any(grepl("optode", profiles$global_config$comment, ignore.case=T))){
       ui = list(ui, wellPanel(
         h4("Optode"),
-        selectInput("optode_foil", "Optode foil Batch #", choices = unique(optode_coefs$batch), selected="1707", width="200px"),
+        selectInput("optode_foil", "Optode foil Batch #", choices = unique(optode_coefs$batch), selected="1517M", width="200px"),
         selectInput('optode_T_channel', "Optode Temperature channel", choices = vchannels, selected = "v7", width="200px"),
         selectInput('optode_dphase_channel', "Optode dPhase channel", choices = vchannels, selected = "v6", width="200px"),
         actionButton('optode', "Process Optode", icon=icon("life-ring"))
