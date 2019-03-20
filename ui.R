@@ -9,6 +9,7 @@ shinyUI(fluidPage(
   titlePanel("CTDQC"),
 
   # Sidebar with a slider input for number of bins
+  # Sidebar ----
   sidebarLayout(
     sidebarPanel(width = 4,
       textOutput('directory'),
@@ -30,10 +31,12 @@ shinyUI(fluidPage(
 
     mainPanel(width = 8,
       tabsetPanel(
+        # summary ----
         tabPanel("Summary",
                  verbatimTextOutput("summary"),
                  verbatimTextOutput("xml")
                  ),
+        # Scan plot ----
         tabPanel("Scan Plot",
                  plotOutput("scan_plot", brush = brushOpts("scan_brush", direction = "x"), height="800px"),
                  h4("Trim"),
@@ -44,6 +47,7 @@ shinyUI(fluidPage(
                  numericInput('decent_threshold', "minimum decent rate threshold (m/s)", value=0.15, step=0.05),
                  numericInput('inversion_window', "decent rate window (s)", value=2, step=0.5)
                  ),
+        # Profile plot ----
         tabPanel("Profile Plot",
                  fluidRow(
                    column(4, selectInput("y", "Y axis", choices = NULL)),
@@ -65,8 +69,11 @@ shinyUI(fluidPage(
                  h4("CTD / Niskin regressions"),
                  tableOutput("bottle_coef")
                  ),
+        # TS plot ----
         tabPanel("TS Plot", plotOutput("TS_plot", height=700, width=700)),
+        # Drift plot ----
         tabPanel("Drift Plot", plotOutput("drift_plot", height=700, width=700)),
+        # Hysteresis plot ----
         tabPanel("Hysteresis Plot",
                  fluidRow(
                    checkboxInput("CT_mode", label="CT alignment mode", value=F),
@@ -74,6 +81,7 @@ shinyUI(fluidPage(
                    column(3, actionButton("apply_lag", "Apply lag", icon=icon("clock")))
                  ),
                  plotOutput("hyst_plot", height=800)),
+        # Filter plot ----
         tabPanel("Filter Plot",
                  fluidRow(
                    column(3, selectInput("filter_x1", "Parameter", choices = NULL)),
@@ -86,8 +94,11 @@ shinyUI(fluidPage(
                    ),
                  plotOutput("filter_plot", height=800, dblclick="filter_plot_dblclick", brush= brushOpts(id="filter_plot_brush", resetOnNew=T))
                  ),
+        # Table ----
         tabPanel("Table", dataTableOutput("datatable")),
+        # Map ----
         tabPanel("Map", leafletOutput("map")),
+        # Sensors ----
         tabPanel("Sensors",
           checkboxInput("apply_global", "Apply Global", value = T),
           tableOutput("config"),
@@ -102,6 +113,7 @@ shinyUI(fluidPage(
           ),
           uiOutput("sensor_ui")
           ),
+        # Bottles ----
         tabPanel("Bottles",
           rHandsontableOutput("bottles"),
           br(),
@@ -111,6 +123,7 @@ shinyUI(fluidPage(
             plotOutput("bottle_plot")
             )
           ),
+        # Publish ----
         tabPanel("Publish",
           # dynamically generated UI
           actionButton('decimate', "Decimate", icon=icon("delicious")),
