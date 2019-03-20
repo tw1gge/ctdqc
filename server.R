@@ -297,16 +297,32 @@ shinyServer(function(input, output, session) {
     processingLog(profiles$data[[input$select_profile]]) = paste(input$filter_x1, "low pass filterd with ", input$filter_t, "second time constant")
   })
 
+  #* mark complete QC2 ----
   observeEvent(input$mark_complete_QC2,{
     processingLog(profiles$data[[input$select_profile]]) = paste("Manual (QC2) Complete")
   })
 
+  #* mark complete ----
   observeEvent(input$mark_complete_all,{
     processingLog(profiles$data[[input$select_profile]]) = paste("All QC Complete")
   })
 
   # SENSORS ----
 
+  #* calculate oxygen saturation % ----
+  observeEvent(input$oxygen_sat, {
+    if(input$apply_global){
+      ilst = names(profiles$data)
+    }else{
+      ilst = input$select_profile
+    }
+    for(i in ilst){
+      profiles = session
+      profiles$untrimmed[[i]] = CTDQC_oxygen_sat(profiles$untrimmed[[i]])
+      profiles$data[[i]] = CTDQC_oxygen_sat(profiles$data[[i]])
+      # TODO get sensors and derive
+    }
+  })
 
   #* process optode ----
   observeEvent(input$optode, {
@@ -316,6 +332,7 @@ shinyServer(function(input, output, session) {
       ilst = input$select_profile
     }
     for(i in ilst){
+      # TODO export to function as above with oxygen sat
       # first calculate for all data (using untrimmed)
       optode_temperature = optode.analogtemp(profiles$untrimmed[[i]]@data[[input$optode_T_channel]])
       optode_Dphase = optode.analogDphase(profiles$untrimmed[[i]]@data[[input$optode_dphase_channel]])
@@ -844,11 +861,12 @@ shinyServer(function(input, output, session) {
   })
 
   #* dynamic sensor UI ----
-  # generate dynamic UI depending on which sensors are in the config
   output$sensor_ui = renderUI({
+    # generate dynamic UI depending on which sensors are in the config
     validate(need(profiles$config, "data not loaded"))
     ui = list()
 
+    #** 2nd CT ----
     if(any(grepl("Conductivity, 2", profiles$global_config$name))){
       # add ui to ui list
       ui <- list(ui, wellPanel(
@@ -857,6 +875,7 @@ shinyServer(function(input, output, session) {
       ))
     }
 
+    #** Optode ----
     if(any(grepl("optode", profiles$global_config$comment, ignore.case=T))){
       ui = list(ui, wellPanel(
         h4("Optode"),
@@ -867,6 +886,7 @@ shinyServer(function(input, output, session) {
       ))
     }
 
+    #** RINKO ----
     if(any(grepl("rinko", profiles$global_config$comment, ignore.case=T))){
       ui = list(ui, wellPanel(
         h4("RINKO"),
@@ -878,6 +898,7 @@ shinyServer(function(input, output, session) {
       ))
     }
 
+    #** PAR ----
     if(any(grepl("licor", c(profiles$global_config$name, profiles$global_config$comment), ignore.case=T))){
       ui = list(ui, wellPanel(
         h4("LiCor PAR"),
@@ -894,6 +915,7 @@ shinyServer(function(input, output, session) {
       ))
     }
 
+    #** Fluorometer ----
     if(any(grepl("fluoro", profiles$global_config$name, ignore.case=T))){
       ui = list(ui, wellPanel(
         h4("Fluorometer"),

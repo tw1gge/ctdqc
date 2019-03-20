@@ -37,6 +37,65 @@ optode.phaseCalc <- function(DPhase, Temp, coefs){
     })
 }
 
+oxygen.sat <- function(temp, salinity, unit = "molm"){
+
+  if(unit == "molkg"){
+    # umol kg coefficents
+    A0 = 5.80871;
+    A1 = 3.20291;
+    A2 = 4.17887;
+    A3 = 5.10006;
+    A4 = -9.86643-2;
+    A5 = 3.80369;
+    B0 = -7.01577e-3;
+    B1 = -7.70028e-3;
+    B2 = -1.13864e-2;
+    B3 = -9.51519e-3;
+    C0 = -2.75915e-7;
+  }else{
+    # cm3 dm-3 coefficents (ml/l)
+    A0 = 2.00907
+    A1 = 3.22014
+    A2 = 4.05010
+    A3 = 4.94457
+    A4 = -0.256847
+    A5 = 3.88767
+    B0 = -0.00624523
+    B1 = -0.00737614
+    B2 = -0.0103410
+    B3 = -0.00817083
+    C0 = -4.88682E-07
+  }
+  Ts = log((298.15-temp)/(273.15+temp))
+
+  O2.sat = A0+(A1*Ts)+(A2*Ts^2)+
+    (A3*Ts^3)+(A4*Ts^4)+(A5*Ts^5)+
+    salinity*(B0+(B1*Ts)+(B2*Ts^2)+(B3*Ts^3))+
+    (C0*salinity^2)
+
+  # molar volume of O2 of 22,39 1.6 cm3 mol-1
+
+  if(unit == "molm"){
+    return(exp(O2.sat) * 44.6596)     # convert ml/l to mmol m-3  as per SCOR WG 142
+  }
+  if(unit == "mll"){
+    return(exp(O2.sat)) # no conversion
+  }
+  if(unit == "mgl"){
+    return(exp(O2.sat) / 0.699745)     # convert ml/l to mg/l
+  }
+  if(unit == "molkg"){
+    return(exp(O2.sat)) # no conversion
+  }
+
+  # 1 Î¼mol O2 = .022391 ml at sea surface pressure
+  # 1 mg/l = 22.391 ml/31.998 = 0.699745 ml/l
+
+  else{
+    stop("unit not recognised")
+  }
+}
+
 optode.correction <- function(O2, t, S, depth = 0, optode_salinity = 0){
   # corrects optode measurements for salinity and depth
     # oxygen units returned same as input
@@ -160,6 +219,14 @@ parse_sbe_xml <- function(oce){
   hdr = paste(hdr, collapse="\n") # unvector it
   hdr = xml2::read_xml(hdr)
   return(hdr)
+}
+
+CTDQC_oxygen_sat <- function(oce){
+      temperature = oce@data[["temperature"]]
+      salinity = oce@data[["salinity"]]
+      oxygen_sat = oxygen.sat(temperature, salinity, unit="molm")
+      oce = oceSetData(oce, "oxsol", oxygen_sat,
+                       unit = list(unit=expression(mmol~m-3), scale="Oxygen Saturation, Garcia & Gordon"))
 }
 
 extract.xml_channel_config <- function(sbe_xml){

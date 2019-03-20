@@ -111,6 +111,14 @@ shinyUI(fluidPage(
                 )
             )
           ),
+          wellPanel(
+            fluidRow(
+              column(5,
+                h4("Calculate oxygen saturation"),
+                  actionButton("oxygen_sat", "Calculate", icon=icon("skyatlas"))
+                )
+            )
+          ),
           uiOutput("sensor_ui")
           ),
         # Bottles ----
