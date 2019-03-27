@@ -523,6 +523,9 @@ shinyServer(function(input, output, session) {
       for(p in names(profiles$data)){
         incProgress(1/length(profiles$data), detail = paste("writing", p))
         d = as.data.table(data[[p]])
+        if("scan" %in% colnames(d)){
+          d = d[!is.na(scan)]
+        }
         if(!"latitude" %in% colnames(d)){
           d$latitude = metadata[[p]]$latitude
           d$longitude = metadata[[p]]$longitude
@@ -533,9 +536,10 @@ shinyServer(function(input, output, session) {
         if(any(grepl("ctdDecimate", log[[p]]$value))){
           d = d[,-c("scan", "time", "dateTime"), with=F]
         }
-        p = substr(p, 1, nchar(p)-4) # drop the .cnv from filename
-        write.csv(d, file = paste0(dir, "/", p, ".csv"))
-        capture.output(summary(profiles$data[[p]]), con="test.log")
+        pn = substr(p, 1, nchar(p)-4) # drop the .cnv from filename
+        pn = gsub(".+\\/", "", p) # drop any subfolder stuff
+        write.csv(d, file = paste0(dir, "/", pn, ".csv"), row.names=F)
+        capture.output(summary(profiles$data[[p]]), file = paste0(dir, "/", pn, ".log"))
       }
     })
   })
