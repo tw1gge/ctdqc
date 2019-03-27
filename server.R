@@ -317,7 +317,6 @@ shinyServer(function(input, output, session) {
       ilst = input$select_profile
     }
     for(i in ilst){
-      profiles = session
       profiles$untrimmed[[i]] = CTDQC_oxygen_sat(profiles$untrimmed[[i]])
       profiles$data[[i]] = CTDQC_oxygen_sat(profiles$data[[i]])
       # TODO get sensors and derive
@@ -733,7 +732,8 @@ shinyServer(function(input, output, session) {
   output$map = renderLeaflet({
     validate(need(!is.null(profiles$data[[input$select_profile]]), "Data not loaded"))
     leaflet(profiles$positions) %>%
-      addTiles() %>%
+      # addTiles() %>%
+      addProviderTiles("Esri.OceanBasemap") %>%
       addMarkers(~longitude, ~latitude, popup = ~paste("Station", station,"\r", "@", startTime)) %>%
       setView(lat = profiles$data[[input$select_profile]]@metadata$latitude,
               lng = profiles$data[[input$select_profile]]@metadata$longitude,
