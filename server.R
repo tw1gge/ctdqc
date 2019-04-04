@@ -510,6 +510,17 @@ shinyServer(function(input, output, session) {
       session$bottles = hot_to_r(input$bottles)
     }
     save(session, file = paste0(dir, "/CTDQC.rdata"))
+      showNotification("Working data saved to CTDQC.rdata", duration=NULL, type="warning")
+  })
+
+  #* write bottle table ----
+  observeEvent(input$write_bottles,{
+    dir = parseDirPath(volumes, input$directory)
+    if(!is.null(input$bottles)){
+      bottles = hot_to_r(input$bottles)
+      write.csv(bottles, file = paste0(dir, "/bottles.csv"), row.names = F)
+      showNotification("Niskin table saved to bottles.csv", duration=NULL, type="warning")
+    }
   })
 
   #* write CSV ----

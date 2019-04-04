@@ -122,7 +122,8 @@ shinyUI(fluidPage(
           uiOutput("sensor_ui")
           ),
         # Bottles ----
-        tabPanel("Bottles",
+        tabPanel("Niskin",
+          actionButton('write_bottles', "Save Niskin .CSV", icon=icon("prescription-bottle")),
           rHandsontableOutput("bottles"),
           br(),
           fluidRow(
