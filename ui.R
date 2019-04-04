@@ -97,7 +97,7 @@ shinyUI(fluidPage(
         # Table ----
         tabPanel("Table", dataTableOutput("datatable")),
         # Map ----
-        tabPanel("Map", leafletOutput("map")),
+        tabPanel("Map", leafletOutput("map", height = "85vh")),
         # Sensors ----
         tabPanel("Sensors",
           checkboxInput("apply_global", "Apply Global", value = T),
