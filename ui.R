@@ -76,9 +76,9 @@ shinyUI(fluidPage(
         # Hysteresis plot ----
         tabPanel("Hysteresis Plot",
                  fluidRow(
-                   checkboxInput("CT_mode", label="CT alignment mode", value=F),
-                   column(3, numericInput("lag", label="Lag (scans)", value=0, step=1)),
-                   column(3, actionButton("apply_lag", "Apply lag", icon=icon("clock")))
+                   column(3, selectInput("CT_mode", "mode", choices = c("profile", "TS_view", "CT_align"))),
+                   column(3, numericInput("lag", label="Lag (scans)", value=0, step=1),
+                          actionButton("apply_lag", "Apply lag", icon=icon("clock")))
                  ),
                  plotOutput("hyst_plot", height=800)),
         # Filter plot ----
@@ -129,6 +129,7 @@ shinyUI(fluidPage(
           fluidRow(
             h4("CTD / Niskin regressions"),
             selectInput("Plot_bottle_select", NULL, choices = c("Select parameter" = "", "Salinity", "Oxygen Optode", "Oxygen RINKO", "Chlorophyll")),
+            # selectInput("bottle_lm_type", NULL, choices = c("std", "slope_only", "intercept_only"))),
             plotOutput("bottle_plot")
             )
           ),

@@ -337,8 +337,14 @@ shinyServer(function(input, output, session) {
       optode_Dphase = optode.analogDphase(profiles$untrimmed[[i]]@data[[input$optode_dphase_channel]])
       salinity = profiles$untrimmed[[i]]@data[["salinity"]]
       depth = profiles$untrimmed[[i]]@data[["depth"]]
+
       optode_oxygen = optode.phaseCalc(optode_Dphase, optode_temperature, subset(optode_coefs, batch == input$optode_foil))
-      optode_oxygen = optode.correction(optode_oxygen, optode_temperature, salinity, depth)
+      if(input$use_sbe_temp == T){
+        sbe_temp = profiles$untrimmed[[i]]@data[["temperature"]]
+        optode_oxygen = optode.correction(optode_oxygen, sbe_temp, salinity, depth)
+      }else{
+        optode_oxygen = optode.correction(optode_oxygen, optode_temperature, salinity, depth)
+      }
       # add to untrimmed
       profiles$untrimmed[[i]] = oceSetData(profiles$untrimmed[[i]], "temperature_optode", optode_temperature,
                                              unit = list(unit=expression(degree*C), scale="Optode"))
@@ -680,6 +686,7 @@ shinyServer(function(input, output, session) {
     validate(need(!is.null(profiles$data[[input$select_profile]]), "Data not loaded"))
     plotTS(profiles$data[[input$select_profile]])
   })
+  #* Cell Thermal Mass ----
 
   #* hysterisis plot ----
   output$hyst_plot = renderPlot({
@@ -692,18 +699,41 @@ shinyServer(function(input, output, session) {
       lag_type = "lag"
       lag_mod = 1
     }
-    if(input$CT_mode){
+    if(input$CT_mode == "CT_align"){
       pd = as.data.table(profiles$data[[input$select_profile]]@data)
       pd[, lagged_C := shift(pd$conductivity, type=lag_type, input$lag * lag_mod)]
       pd[, recalc_S := oce::swSCTp(lagged_C, temperature, pressure, conductivityUnit="S/m")]
       ggplot(pd) +
         geom_path(aes(salinity, pressure), color="black", alpha=0.2) +
         geom_path(aes(recalc_S, pressure), color="red",  alpha=0.5) +
-        theme_bw() + scale_y_reverse() + scale_color_discrete("") +
+        theme_bw() + scale_y_reverse() + scale_color_discrete(element_blank()) +
         labs(x = "salinity", y="pressure", title=paste("sample rate", sample_rate))
-    }else{
+    }
+    if(input$CT_mode == "TS_view"){
+      pd = as.data.table(profiles$untrimmed[[input$select_profile]]@data)
+      pd = pd[scan >= profiles$data[[input$select_profile]]@data$scan[1]]
+      pd[, dir := "down"]
+      scan_max_pressure = min(pd[pressure == max(pressure)]$scan)
+      pd[scan > scan_max_pressure, dir := "up"]
+      if(exists("pumpStatus", where=pd)){
+        pd = pd[pumpStatus == 1 & pressure > 3]
+      }else{
+        pd = pd[pressure > 3]
+      }
+      pd[, lagged_C := shift(pd$conductivity, type=lag_type, input$lag * lag_mod)]
+      pd[, recalc_S := oce::swSCTp(lagged_C, temperature, pressure, conductivityUnit="S/m")]
+      ggplot(pd[salinity > 10 & pressure > 2]) +
+        # geom_path(aes(salinity, temperature), color="black", alpha=0.2) +
+        # geom_point(aes(salinity, temperature, color=dir), alpha=0.2) +
+        geom_path(aes(recalc_S, temperature), color="red", alpha=0.8) +
+        geom_point(aes(recalc_S, temperature, color=dir), alpha=0.8) +
+        theme_bw() + scale_color_discrete(element_blank()) +
+        labs(x = "salinity", y="temperature", title=paste("sample rate", sample_rate))
+    }
+    else{
       pd = as.data.table(profiles$untrimmed[[input$select_profile]]@data)
       scan_max_pressure = min(pd[pressure == max(pressure)]$scan)
+      pd = pd[scan >= profiles$data[[input$select_profile]]@data$scan[1]]
       pd[, dir := "down"]
       pd[scan > scan_max_pressure, dir := "up"]
       if(exists("pumpStatus", where=pd)){
@@ -894,6 +924,7 @@ shinyServer(function(input, output, session) {
     if(any(grepl("optode", profiles$global_config$comment, ignore.case=T))){
       ui = list(ui, wellPanel(
         h4("Optode"),
+        checkboxInput('use_sbe_temp', label = "Use SBE Temperature?", value = F),
         selectInput("optode_foil", "Optode foil Batch #", choices = unique(optode_coefs$batch), selected="1517M", width="200px"),
         selectInput('optode_T_channel', "Optode Temperature channel", choices = vchannels, selected = "v7", width="200px"),
         selectInput('optode_dphase_channel', "Optode dPhase channel", choices = vchannels, selected = "v6", width="200px"),
