@@ -129,7 +129,7 @@ shinyUI(fluidPage(
           fluidRow(
             h4("CTD / Niskin regressions"),
             selectInput("Plot_bottle_select", NULL, choices = c("Select parameter" = "", "Salinity", "Oxygen Optode", "Oxygen RINKO", "Chlorophyll")),
-            # selectInput("bottle_lm_type", NULL, choices = c("std", "slope_only", "intercept_only"))),
+            selectInput("bottle_lm_type", "Linear Model Type", choices = c("std", "slope_only")),
             plotOutput("bottle_plot")
             )
           ),
