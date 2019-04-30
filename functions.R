@@ -297,27 +297,6 @@ netcdf.metadata <- function(d, positions){
   return(metadata)
 }
 
-cell_thermal_mass <- function(){
-  # The algorithm used is:
-  # SBE 9plus with TC duct and 3000 rpm pump
-  # alpha 1/beta
-  # 0.03 7.0
-  #   a = 2 * alpha / (sample interval * beta + 2)
-  #   b = 1 - (2 * a / alpha)
-  #   dc/dT = 0.1 * (1 + 0.006 * [temperature - 20])
-  #   dT = temperature - previous temperature
-  #   ctm [S/m] = -1.0 * b * previous ctm + a * (dc/dT) * dT
-  #   where
-  #   sample interval is measured in seconds and temperature in °C, and ctm is calculated in S/m.
-  #
-  #   If the input file contains conductivity in units other than S/m, Cell Thermal Mass applies the following scale factors to the calculated ctm:
-  #     ctm [mS/cm] = ctm [S/m] * 10.0
-  #   ctm [µS/cm] = ctm [S/m] * 10000.0
-  #
-  #   corrected conductivity = c + ctm
-
-}
-
 update_sbe_log <- function(oce){
   sbedata= list()
   sbedata_strings = c("# datcnv_", "# filter_", "# celltm_", "# Derive_", "# test_")
@@ -554,6 +533,48 @@ read.sbe.ros <- function(file=NA, folder){
   return(output)
 }
 
+sbe.cell_thermal_mass <- function(temperature, conductivity, sample_interval=1/24, alpha=0.03, beta_inv = 7, reverse = F){
+  # alpha = 0.03 # thermal anomaly amplitude
+  # beta_inv = 7 # 1/ thermal anomaly time constant
+  # cond in S/m
+  if(max(conductivity > 9)){warning("your conductivity units are probably wrong")}
+  beta = 1/beta_inv
+  a = 2 * alpha / (sample_interval * beta + 2)
+  b = 1 - (2 * a / alpha)
+  dcdT = 0.1 * (1 + 0.006 * (temperature - 20))
+  dT = c(0, diff(temperature))
+  ctm = vector(length=length(temperature))
+  ctm[1] = 0
+  for(i in 2:length(temperature)){
+    ctm[i] = -1 * b * ctm[i-1] + a * dcdT[i] * dT[i]
+  }
+  # plot(ctm, type="l")
+  if(reverse){
+    print("undoing CTM correction")
+    return(conductivity - ctm)
+  }else{
+    return(conductivity + ctm)
+  }
+}
+
+rescale_var = function(from, to, original=NA){
+  xlow = min(from, na.rm = T)
+  xhigh = max(from, na.rm = T)
+  xdiff = xhigh - xlow
+  rlow = min(to, na.rm = T)
+  rhigh = max(to, na.rm = T)
+  rdiff = rhigh - rlow
+  if(!all(is.na(original))){
+    olow = min(original, na.rm = T)
+    ohigh = max(original, na.rm = T)
+    odiff = ohigh - olow
+    res = ((from - rlow) * (1/rdiff) * odiff) + olow # check this
+    return(res)
+  }
+  res = rlow + (rdiff * (from - xlow) * (1/xdiff))
+  return(res)
+}
+
 CTDQC_manual_calc <- function(session, newvar, sourcevar, factor = 1, offset = 0, log=NA){
   # for manually adding or editing variables
   for(stn in names(session$data)){
@@ -565,3 +586,4 @@ CTDQC_manual_calc <- function(session, newvar, sourcevar, factor = 1, offset = 0
   }
   return(session)
 }
+
