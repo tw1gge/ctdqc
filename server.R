@@ -51,7 +51,7 @@ shinyServer(function(input, output, session) {
       showNotification("no folder selected!", type="error")
       return(NULL)
       }
-    filelist = list.files(parseDirPath(volumes, input$directory), recursive=T, full.names = F, pattern = "*.cnv")
+    filelist = list.files(parseDirPath(volumes, input$directory), recursive=T, full.names = F, pattern = "*.cnv$")
     if(length(filelist) == 0){ # don't crash if folder is empty
       showNotification("no .cnv files found in directory", type="error")
       return(NULL)
