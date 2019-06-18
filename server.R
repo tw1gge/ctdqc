@@ -673,6 +673,9 @@ shinyServer(function(input, output, session) {
     }else{
       pd = pd[pressure > 3]
     }
+    if("timeS" %in% colnames(pd)){
+      pd[, time := timeS] # fix for newer oce
+    }
     ggplot(pd) +
       geom_path(aes(time, filter), color="red") +
       geom_path(aes(time, get(input$filter_x1)), alpha=0.5) +
@@ -794,7 +797,7 @@ shinyServer(function(input, output, session) {
     start_pos = pd[1,.(longitude, latitude)]
     end_pos = pd[nrow(pd),.(longitude, latitude)]
     dist_covered = round(geosphere::distGeo(start_pos, end_pos))
-    if(timeS %in% colnames(pd)){
+    if("timeS" %in% colnames(pd)){
       pd[, time := timeS] # fix for newer oce
     }
     ggplot(pd) +
