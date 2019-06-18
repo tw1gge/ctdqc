@@ -75,11 +75,21 @@ shinyUI(fluidPage(
         tabPanel("Drift Plot", plotOutput("drift_plot", height=700, width=700)),
         # Hysteresis plot ----
         tabPanel("Hysteresis Plot",
+                 h5("DEV Note, these tools are just for information, they currently don't change data"),
                  fluidRow(
-                   column(3, selectInput("CT_mode", "mode", choices = c("profile", "TS_view", "CT_align"))),
-                   column(3, numericInput("lag", label="Lag (scans)", value=0, step=1),
-                          actionButton("apply_lag", "Apply lag", icon=icon("clock")))
-                 ),
+                   column(3,
+                     selectInput("CT_mode", "mode", choices = c("CTD", "var_profile", "TS")),
+                     selectInput("var_profile", "Var", choices = NULL)
+                     ),
+                   column(2, numericInput("lag", label="Lag (scans)", value=0, step=1))),
+                   column(2,
+                     numericInput("CTM_alpha", label="Alpha", value=0.03, step=0.001),
+                     numericInput("CTM_beta", label="Beta", value=7, step=0.1)
+                     ),
+                   column(2,
+                     actionButton("apply_lag", "Apply lag", icon=icon("clock")),
+                     actionButton("apply_CTM", "Apply CTM", icon=icon("clock"))
+                     ),
                  plotOutput("hyst_plot", height=800)),
         # Filter plot ----
         tabPanel("Filter Plot",
