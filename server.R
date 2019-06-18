@@ -686,8 +686,6 @@ shinyServer(function(input, output, session) {
     validate(need(!is.null(profiles$data[[input$select_profile]]), "Data not loaded"))
     plotTS(profiles$data[[input$select_profile]])
   })
-  #* Cell Thermal Mass ----
-
   #* hysterisis plot ----
   output$hyst_plot = renderPlot({
     validate(need(!is.null(profiles$untrimmed[[input$select_profile]]), "Data not loaded"))
@@ -699,17 +697,38 @@ shinyServer(function(input, output, session) {
       lag_type = "lag"
       lag_mod = 1
     }
-    if(input$CT_mode == "CT_align"){
-      pd = as.data.table(profiles$data[[input$select_profile]]@data)
+  #** Cell Thermal Mass ----
+    if(input$CT_mode == "CTD"){
+      pd = as.data.table(profiles$untrimmed[[input$select_profile]]@data)
+      pd = pd[scan >= profiles$data[[input$select_profile]]@data$scan[1]] # get first scan from trimmed data
+      pd[, dir := "down"]
+      scan_max_pressure = min(pd[pressure == max(pressure)]$scan)
+      pd[scan > scan_max_pressure, dir := "up"]
+      if(exists("pumpStatus", where=pd)){
+        pd = pd[pumpStatus == 1 & pressure > 3]
+      }else{
+        pd = pd[pressure > 3]
+      }
+        # get current coefs
+      hdr = profiles$untrimmed[[input$select_profile]]@metadata$header
+      coefs = hdr[grepl("# celltm_", hdr)]
+      celltm_rate = profiles$untrimmed[[input$select_profile]]@metadata$sampleInterval
+      celltm_alpha = as.numeric(stringr::str_extract(coefs[grepl("celltm_alpha", coefs)], "\\d\\.\\d+"))
+      celltm_beta = as.numeric(stringr::str_extract(coefs[grepl("celltm_tau", coefs)], "\\d\\.\\d+"))
+
       pd[, lagged_C := shift(pd$conductivity, type=lag_type, input$lag * lag_mod)]
-      pd[, recalc_S := oce::swSCTp(lagged_C, temperature, pressure, conductivityUnit="S/m")]
-      ggplot(pd) +
-        geom_path(aes(salinity, pressure), color="black", alpha=0.2) +
-        geom_path(aes(recalc_S, pressure), color="red",  alpha=0.5) +
-        theme_bw() + scale_y_reverse() + scale_color_discrete(element_blank()) +
-        labs(x = "salinity", y="pressure", title=paste("sample rate", sample_rate))
+      pd[, uncorrected := sbe.cell_thermal_mass(temperature, lagged_C, alpha=celltm_alpha, beta_inv = celltm_beta, reverse = T)]
+      pd[, CTM := sbe.cell_thermal_mass(temperature, uncorrected, alpha=input$CTM_alpha, beta_inv = input$CTM_beta)]
+      pd[, recalc_S := oce::swSCTp(CTM, temperature, pressure, conductivityUnit="S/m")]
+      p1 = ggplot(pd) +
+        geom_path(aes(recalc_S, pressure, color="Salinity"), alpha=1) +
+        geom_path(aes(rescale_var(temperature, pd$salinity), pressure, color="Temperature"), alpha=1) +
+        scale_x_continuous("Salinity", sec.axis = sec_axis(~ rescale_var(., pd$salinity, pd$temperature), name = "Temperature")) +
+        scale_y_reverse() + theme_bw() +
+        theme(legend.position = "top", legend.title = element_blank())
     }
-    if(input$CT_mode == "TS_view"){
+  #** TS view ----
+    if(input$CT_mode == "TS"){
       pd = as.data.table(profiles$untrimmed[[input$select_profile]]@data)
       pd = pd[scan >= profiles$data[[input$select_profile]]@data$scan[1]]
       pd[, dir := "down"]
@@ -721,16 +740,17 @@ shinyServer(function(input, output, session) {
         pd = pd[pressure > 3]
       }
       pd[, lagged_C := shift(pd$conductivity, type=lag_type, input$lag * lag_mod)]
-      pd[, recalc_S := oce::swSCTp(lagged_C, temperature, pressure, conductivityUnit="S/m")]
-      ggplot(pd[salinity > 10 & pressure > 2]) +
-        # geom_path(aes(salinity, temperature), color="black", alpha=0.2) +
-        # geom_point(aes(salinity, temperature, color=dir), alpha=0.2) +
-        geom_path(aes(recalc_S, temperature), color="red", alpha=0.8) +
+      pd[, uncorrected := sbe.cell_thermal_mass(temperature, lagged_C, reverse = T)]
+      pd[, CTM := sbe.cell_thermal_mass(temperature, uncorrected, alpha=input$CTM_alpha, beta_inv = input$CTM_beta)]
+      pd[, recalc_S := oce::swSCTp(CTM, temperature, pressure, conductivityUnit="S/m")]
+      p1 = ggplot(pd) +
+        geom_path(aes(recalc_S, temperature), color="black", alpha=0.8) +
         geom_point(aes(recalc_S, temperature, color=dir), alpha=0.8) +
         theme_bw() + scale_color_discrete(element_blank()) +
         labs(x = "salinity", y="temperature", title=paste("sample rate", sample_rate))
     }
-    else{
+    # ** Var Profile ----
+    if(input$CT_mode == "var_profile"){
       pd = as.data.table(profiles$untrimmed[[input$select_profile]]@data)
       scan_max_pressure = min(pd[pressure == max(pressure)]$scan)
       pd = pd[scan >= profiles$data[[input$select_profile]]@data$scan[1]]
@@ -741,32 +761,15 @@ shinyServer(function(input, output, session) {
       }else{
         pd = pd[pressure > 3]
       }
-      lagged = shift(pd[[input$filter_x1]], type=lag_type, input$lag * lag_mod)
-      ggplot(pd) +
-        geom_path(aes(get(input$filter_x1), pressure, color=dir), alpha=0.3) +
+      lagged = shift(pd[[input$var_profile]], type=lag_type, input$lag * lag_mod)
+      p1 = ggplot(pd) +
+        geom_path(aes(get(input$var_profile), pressure, color=dir), alpha=0.3) +
         geom_path(aes(lagged, pressure, color=dir)) +
         theme_bw() + scale_y_reverse() + scale_color_discrete("") +
-        labs(x = input$filter_x1, y="pressure", title=paste("sample rate", sample_rate)) +
+        labs(x = input$var_profile, y="pressure", title=paste("sample rate", sample_rate)) +
         theme(legend.position="bottom")
     }
-  })
-
-  observeEvent(input$apply_lag,{
-    if(input$lag < 0){
-      lag_type = "lead"
-      lag_mod = -1
-    }else{
-      lag_type = "lag"
-      lag_mod = 1
-    }
-    lagged = profiles$data[[input$select_profile]]@data[[input$filter_x1]]
-    lagged = shift(lagged, type=lag_type, input$lag * lag_mod)
-    profiles$data[[input$select_profile]]@data[[input$filter_x1]] = lagged
-    processingLog(profiles$data[[input$select_profile]]) = paste(input$filter_x1, "lagged by", input$lag, "scans")
-
-    lagged = profiles$untrimmed[[input$select_profile]]@data[[input$filter_x1]]
-    lagged = shift(lagged, type=lag_type, input$lag * lag_mod)
-    profiles$untrimmed[[input$select_profile]]@data[[input$filter_x1]] = lagged
+    print(p1)
   })
 
   #* map ----

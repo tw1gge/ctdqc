@@ -550,7 +550,7 @@ sbe.cell_thermal_mass <- function(temperature, conductivity, sample_interval=1/2
   }
   # plot(ctm, type="l")
   if(reverse){
-    print("undoing CTM correction")
+    # print("undoing CTM correction")
     return(conductivity - ctm)
   }else{
     return(conductivity + ctm)
