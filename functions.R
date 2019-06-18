@@ -226,7 +226,7 @@ CTDQC_oxygen_sat <- function(oce){
       salinity = oce@data[["salinity"]]
       oxygen_sat = oxygen.sat(temperature, salinity, unit="molm")
       oce = oceSetData(oce, "oxsol", oxygen_sat,
-                       unit = list(unit=expression(mmol~m-3), scale="Oxygen Saturation, Garcia & Gordon"))
+                       unit = list(unit=expression(mmol~m-3), scale="Oxygen Saturation Concentration, Garcia & Gordon"))
 }
 
 extract.xml_channel_config <- function(sbe_xml){
