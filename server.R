@@ -791,6 +791,9 @@ shinyServer(function(input, output, session) {
     start_pos = pd[1,.(longitude, latitude)]
     end_pos = pd[nrow(pd),.(longitude, latitude)]
     dist_covered = round(geosphere::distGeo(start_pos, end_pos))
+    if(timeS %in% colnames(pd)){
+      pd[, time := timeS] # fix for newer oce
+    }
     ggplot(pd) +
       geom_path(aes(longitude, latitude, color=time)) +
       viridis::scale_color_viridis() + theme_bw() +
