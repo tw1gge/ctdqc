@@ -297,6 +297,27 @@ shinyServer(function(input, output, session) {
     processingLog(profiles$data[[input$select_profile]]) = paste(input$filter_x1, "low pass filterd with ", input$filter_t, "second time constant")
   })
 
+  # * apply lag ----
+  observeEvent(input$apply_lag,{
+    return(null) # TODO not currently used
+    if(input$lag < 0){
+      lag_type = "lead"
+      lag_mod = -1
+    }else{
+      lag_type = "lag"
+      lag_mod = 1
+    }
+    lagged = profiles$data[[input$select_profile]]@data[[input$filter_x1]]
+    lagged = shift(lagged, type=lag_type, input$lag * lag_mod)
+    profiles$data[[input$select_profile]]@data[[input$filter_x1]] = lagged
+    processingLog(profiles$data[[input$select_profile]]) = paste(input$filter_x1, "lagged by", input$lag, "scans")
+
+    lagged = profiles$untrimmed[[input$select_profile]]@data[[input$filter_x1]]
+    lagged = shift(lagged, type=lag_type, input$lag * lag_mod)
+    profiles$untrimmed[[input$select_profile]]@data[[input$filter_x1]] = lagged
+  })
+
+
   #* mark complete QC2 ----
   observeEvent(input$mark_complete_QC2,{
     processingLog(profiles$data[[input$select_profile]]) = paste("Manual (QC2) Complete")
