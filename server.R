@@ -856,29 +856,22 @@ shinyServer(function(input, output, session) {
   output$bottle_plot = renderPlot({
     if(input$Plot_bottle_select == "Salinity"){
       dat = hot_to_r(input$bottles)[bottle_sal != 0]
-      if(input$bottle_lm_type == "slope_only"){
-        m = lm(data = dat, bottle_sal ~ 0 + salinity)
-        par(mfrow = c(1, 2))
-        plot(dat$salinity, dat$bottle_sal,
-             col = "blue", ylab = "Salinity bottle", xlab = "CT", main = "CT vs Niskin, Primary CT",
-             sub = paste0("y = ", round(coef(m)[1], 4),"x"))
-        abline(m)
-        hist(m$residuals, main = "Residuals (Primary CT)", breaks=10)
-        profiles$bottle_coef[["salinity"]] = list(var = "salinity", factor = coef(m)[2], offset = coef(m)[1])
-      }else{
-        m = lm(data = dat, bottle_sal ~ salinity)
-        par(mfrow = c(1, 2))
-        plot(dat$salinity, dat$bottle_sal,
-             col = "blue", ylab = "Salinity bottle", xlab = "CT", main = "CT vs Niskin, Primary CT",
-             sub = paste0("y = ", round(coef(m)[1], 3), " + ", round(coef(m)[2], 3),"x"))
-        abline(m)
-        hist(m$residuals, main = "Residuals (Primary CT)", breaks=10)
-        profiles$bottle_coef[["salinity"]] = list(var = "salinity", factor = coef(m)[2], offset = coef(m)[1])
-      }
+      if(input$bottle_lm_type == "std"){f = formula(bottle_sal ~ salinity)}
+      if(input$bottle_lm_type == "slope_only"){f = formula(bottle_sal ~ 0 + salinity)}
+      m = lm(data = dat, f)
+      par(mfrow = c(1, 2))
+      plot(dat$salinity, dat$bottle_sal,
+           col = "blue", ylab = "Salinity bottle", xlab = "CT", main = "CT vs Niskin, Primary CT",
+           sub = paste0("y = ", round(coef(m)[1], 4),"x"))
+      abline(m)
+      hist(m$residuals, main = "Residuals (Primary CT)", breaks=10)
+      profiles$bottle_coef[["salinity"]] = list(var = "salinity", factor = coef(m)[2], offset = coef(m)[1])
     }
     if(input$Plot_bottle_select == "Oxygen Optode"){
       dat = hot_to_r(input$bottles)[bottle_O2 != 0]
-      m = lm(data = dat, bottle_O2 ~ oxygen_optode)
+      if(input$bottle_lm_type == "std"){f = formula(bottle_O2 ~ oxygen_optode)}
+      if(input$bottle_lm_type == "slope_only"){f = formula(bottle_O2 ~ 0 + oxygen_optode)}
+      m = lm(data = dat, f)
       par(mfrow = c(1, 2))
       plot(dat$oxygen_optode, dat$bottle_O2,
            col = "green", ylab = "Winkler", xlab = "Optode", main = "Optode vs Winkler",
@@ -889,7 +882,9 @@ shinyServer(function(input, output, session) {
     }
     if(input$Plot_bottle_select == "Oxygen RINKO"){
       dat = hot_to_r(input$bottles)[bottle_O2 != 0]
-      m = lm(data = dat, bottle_O2 ~ oxygen_RINKO)
+      if(input$bottle_lm_type == "std"){f = formula(bottle_O2 ~ oxygen_RINKO)}
+      if(input$bottle_lm_type == "slope_only"){f = formula(bottle_O2 ~ 0 + oxygen_RINKO)}
+      m = lm(data = dat, f)
       par(mfrow = c(1, 2))
       plot(dat$oxygen_RINKO, dat$bottle_O2,
            col = "green", ylab = "Winkler", xlab = "RINKO", main = "RINKO vs Winkler",
