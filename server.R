@@ -139,7 +139,7 @@ shinyServer(function(input, output, session) {
     dat = rbindlist(lapply(lapply(profiles$untrimmed , function(x) `@`( x , data)), data.frame), idcol = "profile", fill = T)
       # select only the columns we want, if they are available
     avail_names = colnames(dat)
-    want_names = c("depth", "salinity", "salinity2", "fluorescence", "oxygen_optode", "oxygen_RINKO")
+    want_names = c("depth", "salinity", "temperature", "fluorescence", "oxygen_optode", "oxygen_RINKO")
     names = na.omit(want_names[chmatch(avail_names, want_names)])
       # for each bottle, match to scans and profile
     dat = dat[, c("profile", "scan", names), with = F]
@@ -148,7 +148,13 @@ shinyServer(function(input, output, session) {
     dat = foverlaps(dat, na.omit(scans), by.x=c("profile", "scan", "scan0"), nomatch = 0)
       # calc_mean
     dat = dat[,lapply(.SD, mean), by = list(profile, fire_seq, niskin, dateTime), .SDcols = names]
-    dat = cbind(dat, data.frame("bottle_sal" = 0, "bottle_O2" = 0, "bottle_Chl" = 0))
+    if("bottles" %in% names(profiles)){
+      dat$bottle_sal = profiles$bottles$bottle_sal
+      dat$bottle_O2 = profiles$bottles$bottle_O2
+      dat$bottle_Chl = profiles$bottles$bottle_Chl
+    }else{
+      dat = cbind(dat, data.frame("bottle_sal" = 0, "bottle_O2" = 0, "bottle_Chl" = 0))
+    }
     profiles$bottles = dat
   })
 
