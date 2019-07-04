@@ -371,18 +371,18 @@ write.ctd.csv <- function(profiles, profile_name, decimate = 1, dir){
   capture.output(summary(profile), file = paste0(dir, "/", pn, ".log"))
 }
 
-write.ctd.netcdf <- function(session, sensor_metadata, publish_param, decimate = 1, dir){
+write.ctd.netcdf <- function(session, sensor_metadata, publish_param, decimate = 0.5, dir){
   require(RNetCDF)
   require(uuid)
   require(reshape2)
-  options(stringsAsFactors=F)
-    # testing
-  load("CTDQC.rdata")
-  sensor_metadata = fread("sensor_table.csv")
-  decimate = 0.5
-  publish_param = generate_parameter_table(session, sensor_metadata)
-  publish_param$publish = T
-  # http://cfconventions.org/Data/cf-standard-names/34/build/cf-standard-name-table.html
+      # testing
+    # load("../../CTD/CEND_15_18/CTDQC.rdata")
+    # sensor_metadata = fread("sensor_table.csv", stringsAsFactors = F)
+    # decimate = 0.5
+    # publish_param = generate_parameter_table(session, sensor_metadata)
+    # publish_param$publish = T
+    # dir = "./"
+    # http://cfconventions.org/Data/cf-standard-names/34/build/cf-standard-name-table.html
 
   # validates that all QC steps are done
   log = rbindlist(lapply(session$data , function(x) as.data.frame(`@`( x , processingLog))), idcol=T)
@@ -406,7 +406,7 @@ write.ctd.netcdf <- function(session, sensor_metadata, publish_param, decimate =
   v_station[, station := as.numeric(stringr::str_extract(station, "[0-9]+$"))]
   if(anyDuplicated(v_station$station)){
     warning("duplicate stations!")
-    stop()
+    return(NULL)
   }
 
     # build master table
@@ -421,7 +421,6 @@ write.ctd.netcdf <- function(session, sensor_metadata, publish_param, decimate =
   sb = merge(v_station, sb, by="id")[order(station, pressure)]
 
   sensor_metadata = sensor_metadata[parameter %in% colnames(sb)]
-
 
   # setup netcdf
   filename = paste0(dir, "/", session$global_metadata$id, ".nc")
