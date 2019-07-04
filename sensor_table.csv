@@ -8,7 +8,7 @@ turbidity,turbidity,OBS_SeapointTurbiditySensor,inst_turb,optical backscatter,tu
 fluorescence,fluorescence,FluoroSeapointSensor,inst_flu,chlorophyll fluorometer,fluorometer,Seapoint SCF,Chlorophyll fluorescence,,1,0.1,-99999,0.1,50
 oxygen_RINKO,oxygen,RINKO III Temperature,inst_oxy,oxygen optode,oxygen meter,RINKO III,Dissolved oxygen,mole_concentration_of_dissolved_molecular_oxygen_in_sea_water,mmol m-3,0.1,-99999,50,400
 oxygen_optode,oxygen2,,inst_oxy2,oxygen optode,oxygen meter,Aanderaa 4880,Dissolved oxygen,mole_concentration_of_dissolved_molecular_oxygen_in_sea_water,mmol m-3,0.1,-99999,50,400
-par_li,par,,inst_par,Photosynthetically Active Radiation Sensor,PAR sensor,Licor Li-192 with Cefas low light amplifier,Photosynthetically Active Radiation (PAR),downwelling_photosynthetic_photon_flux_in_sea_water,mol m-2 s-1,NA,-99999,1.00E-04,10
-par,par,PARLog_SatlanticSensor,inst_par,Photosynthetically Active Radiation Sensor,PAR sensor,Satlantic Logarithmic PAR,Photosynthetically Active Radiation (PAR),downwelling_photosynthetic_photon_flux_in_sea_water,mol m-2 s-1,NA,-99999,1.00E-04,5
+PAR_cefas,PAR,,inst_par,Photosynthetically Active Radiation Sensor,PAR sensor,Licor Li-192 with Cefas low light amplifier,Photosynthetically Active Radiation (PAR),downwelling_photosynthetic_photon_flux_in_sea_water,mol m-2 s-1,NA,-99999,1.00E-04,10
+PAR,PAR,PARLog_SatlanticSensor,inst_par,Photosynthetically Active Radiation Sensor,PAR sensor,Satlantic Logarithmic PAR,Photosynthetically Active Radiation (PAR),downwelling_photosynthetic_photon_flux_in_sea_water,mol m-2 s-1,NA,-99999,1.00E-04,5
 spm,spm,,inst_turb,optical backscatter,turbidity meter,Seapoint STM,Suspended Particulate Matter,,g m-3,0.1,-99999,0,100
 chlorophyll,chlorophyll,,inst_flu,chlorophyll fluorometer,fluorometer,Seapoint SCF,Chlorophyll,chlorophyll_concentration_in_sea_water,mg m-3,0.1,-99999,0,50

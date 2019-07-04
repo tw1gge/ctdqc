@@ -456,7 +456,7 @@ shinyServer(function(input, output, session) {
     for(i in ilst){
       # calculate using untrimmed data
       licor_par = par_from_voltage(profiles$untrimmed[[i]]@data[[input$par_channel]], input$licor_factor, input$licor_offset)
-      profiles$untrimmed[[i]] = oceSetData(profiles$untrimmed[[i]], "par", licor_par,
+      profiles$untrimmed[[i]] = oceSetData(profiles$untrimmed[[i]], "PAR_cefas", licor_par,
                                            unit = list(unit=expression(umol~s-1~m-2), scale = "PAR/Irradiance, Cefas Licor PAR"))
       # now subset and add to data
       scans = profiles$data[[i]][["scan"]]
@@ -465,7 +465,7 @@ shinyServer(function(input, output, session) {
                  scan <= scans[length(scans)])
 
       log = paste("PAR processed with factor =", input$licor_factor, ",offset =", input$licor_offset)
-      profiles$data[[i]] = oceSetData(profiles$data[[i]], "par", x[["par"]],
+      profiles$data[[i]] = oceSetData(profiles$data[[i]], "PAR_cefas", x[["PAR_cefas"]],
                                       unit = list(unit=expression(umol~s-1~m-2), scale = "PAR/Irradiance, Cefas Licor PAR"),
                                       note = log)
     }
@@ -474,8 +474,8 @@ shinyServer(function(input, output, session) {
   #* flag night PAR ----
   observeEvent(input$flag_par, {
     # TODO make work with global? and based on lat/lon/time
-    if("par" %in% names(profiles$data[[input$select_profile]]@data)){
-      profiles$data[[input$select_profile]][["par"]] = NA
+    if("PAR" %in% names(profiles$data[[input$select_profile]]@data)){
+      profiles$data[[input$select_profile]][["PAR"]] = NA
       log = paste("All PAR removed (Night)")
       processingLog(profiles$data[[input$select_profile]]) = log
     }
@@ -487,9 +487,9 @@ shinyServer(function(input, output, session) {
   #* flag quenched flu ----
   observeEvent(input$flag_flu, {
     # TODO make work with global?
-    if("par" %in% names(profiles$data[[input$select_profile]]@data)){
-      profiles$data[[input$select_profile]][["fluorescence"]] [profiles$data[[input$select_profile]][["par"]] > input$par_flu_threshold] = NA
-      profiles$untrimmed[[input$select_profile]][["fluorescence"]] [profiles$untrimmed[[input$select_profile]][["par"]] > input$par_flu_threshold] = NA
+    if("PAR" %in% names(profiles$data[[input$select_profile]]@data)){
+      profiles$data[[input$select_profile]][["fluorescence"]] [profiles$data[[input$select_profile]][["PAR"]] > input$par_flu_threshold] = NA
+      profiles$untrimmed[[input$select_profile]][["fluorescence"]] [profiles$untrimmed[[input$select_profile]][["PAR"]] > input$par_flu_threshold] = NA
       log = paste("fluorometry values where PAR >", input$par_flu_threshold, " have been flagged")
       processingLog(profiles$data[[input$select_profile]]) = log
     }
