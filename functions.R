@@ -341,6 +341,35 @@ generate_parameter_table <- function(session, sensor_metadata){
   return(tbl)
 }
 
+write.ctd.csv <- function(profile_name, decimate = 1, dir){
+  profile = profiles$data[[profile_name]]
+  if(decimate > 0){
+    profile = ctdDecimate(profile, p = 0.5)
+  }
+  d = as.data.table(profile@data)
+  d = d[!is.na(scan)]
+
+  if(!"latitude" %in% colnames(d)){
+     d$latitude = profile@metadata$latitude
+     d$longitude = profile@metadata$longitude
+     }
+  d$startTime = profile@metadata$startTime
+  d$station = profile@metadata$station
+  if("timeS" %in% colnames(d)){
+    d[, dateTime := startTime + timeS]
+  }else{
+    d[, dateTime := startTime + time]
+  }
+  if(decimate > 0){
+    suppressWarnings(d[, c("dateTime", "time", "timeS", "scan") := NULL])
+  }
+
+  pn = substr(profile_name, 1, nchar(profile_name)-4) # drop the .cnv from filename
+  pn = gsub(".+\\/", "", pn) # drop any subfolder stuff
+  write.csv(d, file = paste0(dir, "/", pn, ".csv"), row.names=F)
+  capture.output(summary(profile), file = paste0(dir, "/", pn, ".log"))
+}
+
 write.ctd.netcdf <- function(session, sensor_metadata, publish_param, decimate = 1, dir){
   require(RNetCDF)
   require(uuid)

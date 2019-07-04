@@ -145,8 +145,7 @@ shinyUI(fluidPage(
           ),
         # Publish ----
         tabPanel("Publish",
-          # dynamically generated UI
-          actionButton('decimate', "Decimate", icon=icon("delicious")),
+          checkboxInput('decimate', "Decimate"),
           numericInput('bin_size', "Bin Size (m)", min = 0.5, max = 5, value = 0.5, step = 0.5),
           br(),
           actionButton('write_netcdf', "Publish NetCDF", icon=icon("object-group")),
@@ -154,6 +153,7 @@ shinyUI(fluidPage(
           fluidRow(
             column(6,
               h4("Global metadata"),
+              # dynamically generated UI
               uiOutput("edit_metadata"),
               rHandsontableOutput("publish_param")
               ),

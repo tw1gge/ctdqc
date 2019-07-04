@@ -17,7 +17,7 @@ library(geosphere, quietly=T)
 
 source("functions.R", local = T)
 CTDQC_version = "2.0"
-# tested against oce version 1.0-1
+# tested against oce version 1.1
 editable_metadata = c("id", "title", "summary", "processing_level", "comment", "acknowledgment", "licence", "project", "creator", "creator_email")
 sensor_metadata = fread("sensor_table.csv")
 ctd_columns = list(
@@ -25,17 +25,21 @@ ctd_columns = list(
   )
 vchannels = c("v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7")
 
-# runUrl("https://bitbucket.org/betascoo8/ctdqc/get/dev.zip")
-
 shinyServer(function(input, output, session) {
 
   # find OS disk drives
-  # volumes = getVolumesFast()
-  if(dir.exists("\\\\lowfilecds\\Function\\SmartBuoyData\\CTD - SBE")){
-    volumes = c("SmartBuoyData:" = "\\\\lowfilecds\\Function\\SmartBuoyData\\CTD - SBE", "C:" = "C:")
+  volumes = getVolumesFast()
+  # if(dir.exists("\\\\lowfilecds\\Function\\SmartBuoyData\\CTD - SBE")){
+  #   volumes = c("SmartBuoyData:" = "\\\\lowfilecds\\Function\\SmartBuoyData\\CTD - SBE", "C:" = "C:")
+  # }
+  # if(dir.exists(paste0(Sys.getenv("USERPROFILE"),"\\Dropbox (CEFAS)\\CTD"))){
+  #   volumes = c("Dropbox:" = paste0(Sys.getenv("USERPROFILE"),"\\Dropbox (CEFAS)\\CTD"), volumes)
+  # }
+  if(dir.exists("H:\\Dropbox (CEFAS)\\CTD")){
+    volumes = c("Dropbox:" = "H:\\Dropbox (CEFAS)\\CTD", volumes)
   }
-  if(dir.exists(paste0(Sys.getenv("USERPROFILE"),"\\Dropbox (CEFAS)\\CTD"))){
-    volumes = c("Dropbox:" = paste0(Sys.getenv("USERPROFILE"),"\\Dropbox (CEFAS)\\CTD"), volumes)
+  if(dir.exists("C:\\Users\\th05\\Dropbox (CEFAS)\\CTD")){
+    volumes = c("Dropbox:" = "C:\\Users\\th05\\Dropbox (CEFAS)\\CTD", volumes)
   }
   shinyDirChoose(input, 'directory', roots=volumes, session=session, restrictions=system.file(package='base'), updateFreq=500)
   output$directory = renderText({paste0(parseDirPath(volumes, input$directory), "/")})
@@ -575,29 +579,10 @@ shinyServer(function(input, output, session) {
   observeEvent(input$write_csv,{
     dir = parseDirPath(volumes, input$directory)
     withProgress(message = 'writing files...', value = 0, {
-      data = lapply(profiles$data , function(x) `@`( x , data))
-      metadata = lapply(profiles$data , function(x) `@`( x , metadata))
-      log = lapply(profiles$data , function(x) `@`( x , processingLog))
       for(p in names(profiles$data)){
         incProgress(1/length(profiles$data), detail = paste("writing", p))
-        d = as.data.table(data[[p]])
-        if("scan" %in% colnames(d)){
-          d = d[!is.na(scan)]
-        }
-        if(!"latitude" %in% colnames(d)){
-          d$latitude = metadata[[p]]$latitude
-          d$longitude = metadata[[p]]$longitude
-        }
-        d$startTime = metadata[[p]]$startTime
-        d$station = metadata[[p]]$station
-        d[, dateTime := startTime + time]
-        if(any(grepl("ctdDecimate", log[[p]]$value))){
-          d = d[,-c("scan", "time", "dateTime"), with=F]
-        }
-        pn = substr(p, 1, nchar(p)-4) # drop the .cnv from filename
-        pn = gsub(".+\\/", "", p) # drop any subfolder stuff
-        write.csv(d, file = paste0(dir, "/", pn, ".csv"), row.names=F)
-        capture.output(summary(profiles$data[[p]]), file = paste0(dir, "/", pn, ".log"))
+        if(input$decimate){ bin_size = input$bin_size }else{ bin_size = 0 }
+        write.ctd.csv(p, decimate = bin_size, dir)
       }
     })
   })
@@ -606,7 +591,11 @@ shinyServer(function(input, output, session) {
   observeEvent(input$write_netcdf, {
     publish_param = data.table(hot_to_r(input$publish_param))[publish == T]
     fn = write.ctd.netcdf(profiles, sensor_metadata, publish_param, input$decimate, parseDirPath(volumes, input$directory))
-    showNotification(paste("NetCDF written", fn))
+    if(is.null(fn)){
+      showNotification("error with netcdf, see console", type="error")
+    }else{
+      showNotification(paste("NetCDF written", fn))
+    }
   })
 
 
