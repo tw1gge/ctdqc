@@ -427,6 +427,21 @@ shinyServer(function(input, output, session) {
     }
   })
 
+  #* flag shallow altimeter ----
+  observeEvent(input$flagAlt, {
+    if(input$apply_global){
+      ilst = names(profiles$data)
+    }else{
+      ilst = input$select_profile
+    }
+    for(i in ilst){
+      prs = profiles$data[[i]]@data[["pressure"]]
+      profiles$data[[i]]@data[["altimeter"]][prs < 5] = NA
+      log = paste("flag applied to altimeter for ship interference (depth < 5 m)")
+      processingLog(profiles$data[[i]]) = log
+    }
+  })
+
   #* process Li-Cor PAR ----
   observeEvent(input$licor, {
     if(input$apply_global){
@@ -1011,6 +1026,13 @@ shinyServer(function(input, output, session) {
         numericInput('chl_factor', label="Chl Factor", value=1.0, step=0.01, width="200px"),
         numericInput('chl_offset', label="Chl Offset", value=0.0, step=0.01, width="200px"),
         actionButton('calc_flu', "derive Chlorophyll from flu regression", icon=icon("leaf"))
+      ))
+    }
+    #** altimeter ----
+    if(any(grepl("altimeter", profiles$global_config$name, ignore.case=T))){
+      ui = list(ui, wellPanel(
+        h4("Altimeter"),
+        actionButton('flagAlt', "Flag shallow (< 5m) altimeter (remove ship interference)", icon=icon("ban"))
       ))
     }
 
