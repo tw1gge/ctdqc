@@ -320,19 +320,20 @@ flag_extra_pump <- function(oce, scans=50){
 }
 
 generate_parameter_table <- function(session, sensor_metadata){
+  # sensor_metadata = fread("sensor_table.csv", stringsAsFactors = F)
   tbl = sensor_metadata[,.(parameter, instid, sbe_name)]
   available_params = unique(unlist(lapply(session$data , function(x) names(`@`( x , data))))) # eugh
   tbl = tbl[parameter %in% available_params]
   serials = session$global_config$serial
   names = session$global_config$sbename
   for(i in 1:nrow(tbl)){
-    par = tbl[i]$sbe_name
-    if(par %in% names){
-      ser = serials[grepl(par, names, ignore.case=T)]
+    parameter = tbl[i]$sbe_name
+    if(any(grepl(parameter, names, ignore.case = T))){
+      ser = serials[grepl(parameter, names, ignore.case=T)]
       tbl[i, serial := ser[1]]
     }else{
-      if(par != ""){
-        ser = serials[grepl(par, session$global_config$comment)]
+      if(parameter != ""){
+        ser = serials[grepl(parameter, session$global_config$comment, ignore.case = T)]
         tbl[i, serial := ser[1]]
       }
     }
@@ -341,7 +342,7 @@ generate_parameter_table <- function(session, sensor_metadata){
   return(tbl)
 }
 
-write.ctd.csv <- function(profile_name, decimate = 1, dir){
+write.ctd.csv <- function(profiles, profile_name, decimate = 1, dir){
   profile = profiles$data[[profile_name]]
   if(decimate > 0){
     profile = ctdDecimate(profile, p = 0.5)
