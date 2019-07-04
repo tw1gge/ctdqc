@@ -577,12 +577,13 @@ shinyServer(function(input, output, session) {
 
   #* write CSV ----
   observeEvent(input$write_csv,{
-    dir = parseDirPath(volumes, input$directory)
+    outputdir = file.path(parseDirPath(volumes, input$directory), "export")
+    dir.create(outputdir)
     withProgress(message = 'writing files...', value = 0, {
       for(p in names(profiles$data)){
         incProgress(1/length(profiles$data), detail = paste("writing", p))
         if(input$decimate){ bin_size = input$bin_size }else{ bin_size = 0 }
-        write.ctd.csv(p, decimate = bin_size, dir)
+        write.ctd.csv(profiles, p, decimate = bin_size, outputdir)
       }
     })
   })
@@ -590,7 +591,9 @@ shinyServer(function(input, output, session) {
   #* write netCDF ----
   observeEvent(input$write_netcdf, {
     publish_param = data.table(hot_to_r(input$publish_param))[publish == T]
-    fn = write.ctd.netcdf(profiles, sensor_metadata, publish_param, input$decimate, parseDirPath(volumes, input$directory))
+    outputdir = file.path(parseDirPath(volumes, input$directory), "export")
+    dir.create(outputdir)
+    fn = write.ctd.netcdf(profiles, sensor_metadata, publish_param, input$bin_size, outputdir)
     if(is.null(fn)){
       showNotification("error with netcdf, see console", type="error")
     }else{
