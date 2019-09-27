@@ -138,6 +138,7 @@ shinyServer(function(input, output, session) {
         }
       }
     })
+
     scans = data.table(rbindlist(b))
       # for each ctd in the list, extract the data, then for each extract convert to data.frame, then combine
     dat = rbindlist(lapply(lapply(profiles$untrimmed , function(x) `@`( x , data)), data.frame), idcol = "profile", fill = T)
@@ -152,7 +153,8 @@ shinyServer(function(input, output, session) {
     dat = foverlaps(dat, na.omit(scans), by.x=c("profile", "scan", "scan0"), nomatch = 0)
       # calc_mean
     dat = dat[,lapply(.SD, mean), by = list(profile, fire_seq, niskin, dateTime), .SDcols = names]
-    if("bottles" %in% names(profiles)){
+    if("bottles" %in% names(profiles) & !is.na(profiles$bottles)){
+      print("bottles previously loaded, preserving state")
       dat$bottle_sal = profiles$bottles$bottle_sal
       dat$bottle_O2 = profiles$bottles$bottle_O2
       dat$bottle_Chl = profiles$bottles$bottle_Chl
