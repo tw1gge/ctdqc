@@ -29,18 +29,18 @@ shinyServer(function(input, output, session) {
 
   # find OS disk drives
   volumes = getVolumesFast()
-  # if(dir.exists("\\\\lowfilecds\\Function\\SmartBuoyData\\CTD - SBE")){
-  #   volumes = c("SmartBuoyData:" = "\\\\lowfilecds\\Function\\SmartBuoyData\\CTD - SBE", "C:" = "C:")
-  # }
+  if(dir.exists("\\\\lowfilecds\\Function\\SmartBuoyData\\CTD - SBE")){
+    volumes = c("SmartBuoyData:" = "\\\\lowfilecds\\Function\\SmartBuoyData\\CTD - SBE", "C:" = "C:")
+  }
   # if(dir.exists(paste0(Sys.getenv("USERPROFILE"),"\\Dropbox (CEFAS)\\CTD"))){
   #   volumes = c("Dropbox:" = paste0(Sys.getenv("USERPROFILE"),"\\Dropbox (CEFAS)\\CTD"), volumes)
   # }
-  if(dir.exists("H:\\Dropbox (CEFAS)\\CTD")){
-    volumes = c("Dropbox:" = "H:\\Dropbox (CEFAS)\\CTD", volumes)
-  }
-  if(dir.exists("C:\\Users\\th05\\Dropbox (CEFAS)\\CTD")){
-    volumes = c("Dropbox:" = "C:\\Users\\th05\\Dropbox (CEFAS)\\CTD", volumes)
-  }
+  # if(dir.exists("H:\\Dropbox (CEFAS)\\CTD")){
+  #   volumes = c("Dropbox:" = "H:\\Dropbox (CEFAS)\\CTD", volumes)
+  # }
+  # if(dir.exists("C:\\Users\\th05\\Dropbox (CEFAS)\\CTD")){
+  #   volumes = c("Dropbox:" = "C:\\Users\\th05\\Dropbox (CEFAS)\\CTD", volumes)
+  # }
   shinyDirChoose(input, 'directory', roots=volumes, session=session, restrictions=system.file(package='base'), updateFreq=500)
   output$directory = renderText({paste0(parseDirPath(volumes, input$directory), "/")})
   # make dynamic file list for storing the CTD objects, a list of S4 objects
